@@ -1,0 +1,34 @@
+#######################################
+# Syntax Coloring Map - Alfredo_NoU
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)                                      
+#######################################
+
+AlfredoCRSF				KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin 					KEYWORD2
+update                                  KEYWORD2
+getChannel				KEYWORD2
+queuePacket				KEYWORD2
+isLinkUp				KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+CRSF_BAUDRATE				LITERAL1
+CRSF_SYNC_BYTE				LITERAL1
+CRSF_FRAMETYPE_BATTERY_SENSOR		LITERAL1
+CRSF_FRAMETYPE_GPS			LITERAL1
+CRSF_FRAMETYPE_VARIO			LITERAL1
+CRSF_FRAMETYPE_BATTERY_SENSOR		LITERAL1
+CRSF_FRAMETYPE_BARO_ALTITUDE		LITERAL1
+CRSF_FRAMETYPE_LINK_STATISTICS		LITERAL1
+CRSF_FRAMETYPE_RC_CHANNELS_PACKED	LITERAL1
+CRSF_FRAMETYPE_ATTITUDE			LITERAL1
