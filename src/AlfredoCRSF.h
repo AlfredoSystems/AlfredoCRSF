@@ -36,6 +36,7 @@ private:
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
     uint8_t _rxBufPos;
     Crc8 _crc;
+    crsf_channels_t _channelsPacked;
     crsfLinkStatistics_t _linkStatistics;
     crsf_sensor_gps_t _gpsSensor;
     crsf_sensor_vario_t _varioSensor;
