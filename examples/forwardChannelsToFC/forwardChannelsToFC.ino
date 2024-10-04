@@ -1,6 +1,5 @@
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
-#include <SoftwareSerial.h>
 
 #define PIN_RX_IN1 18
 #define PIN_TX_IN1 19
