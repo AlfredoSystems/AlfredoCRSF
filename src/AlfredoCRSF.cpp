@@ -162,7 +162,7 @@ void AlfredoCRSF::packetChannelsPacked(const crsf_header_t *p)
     _linkIsUp = true;
     _lastChannelsPacket = millis();
 
-    memcpy(&_channelsPacked, crsf_channels_t, sizeof(_channelsPacked));
+    memcpy(&_channelsPacked, ch, sizeof(_channelsPacked));
 }
 
 void AlfredoCRSF::packetLinkStatistics(const crsf_header_t *p)
