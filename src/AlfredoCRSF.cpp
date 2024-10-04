@@ -224,16 +224,16 @@ void AlfredoCRSF::queuePacket(uint8_t addr, uint8_t type, const void *payload, u
     buf[2] = type;
     memcpy(&buf[3], payload, len);
     buf[len+3] = _crc.calc(&buf[2], len + 1);
-    
-   // for(int i = 0; i <= len + 3; i++)
-   // {
-      // Serial.print(String(buf[i], HEX));
-      // Serial.print(" ");
-   // }
-   // Serial.println(" ");
-   
-    // Busywait until the serial port seems free
-    //while (millis() - _lastReceive < 2)
-    //    loop();
+    write(buf, len + 4);
+}
+
+void AlfredoCRSF::writePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len)
+{
+    uint8_t buf[CRSF_MAX_PACKET_LEN+4];
+    buf[0] = addr;
+    buf[1] = len + 2; // type + payload + crc
+    buf[2] = type;
+    memcpy(&buf[3], payload, len);
+    buf[len+3] = _crc.calc(&buf[2], len + 1);
     write(buf, len + 4);
 }
