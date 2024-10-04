@@ -19,6 +19,7 @@ public:
     void write(uint8_t b);
     void write(const uint8_t *buf, size_t len);
     void queuePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
+    void writePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
 
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
