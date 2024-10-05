@@ -23,7 +23,7 @@ public:
 
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
-    const crsf_channels_t *getChanneslPacked() const { return &_channelsPacked;}
+    const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
     const crsfLinkStatistics_t *getLinkStatistics() const { return &_linkStatistics; }
     const crsf_sensor_gps_t *getGpsSensor() const { return &_gpsSensor; }
     const crsf_sensor_vario_t *getVarioSensor() const { return &_varioSensor; }
