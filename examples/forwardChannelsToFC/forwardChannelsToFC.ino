@@ -72,7 +72,7 @@ int getLinkQuality(AlfredoCRSF& crsf) {
 
 // Method to send channels based on CRSF instance
 void sendChannels(AlfredoCRSF& crsf) {
-  const crsf_channels_t* channels_ptr = crsf.getChanneslPacked();
+  const crsf_channels_t* channels_ptr = crsf.getChannelsPacked();
   crsfOut.writePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, channels_ptr, sizeof(*channels_ptr));
 }
 
