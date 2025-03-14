@@ -94,7 +94,7 @@ void AlfredoCRSF::checkLinkDown()
 void AlfredoCRSF::processPacketIn(uint8_t len)
 {
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
-    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) //Rx to FC
     {
         switch (hdr->type)
         {
@@ -113,6 +113,13 @@ void AlfredoCRSF::processPacketIn(uint8_t len)
         case CRSF_FRAMETYPE_VARIO:
             packetVario(hdr);
             break;
+        }
+    } 
+    else if (hdr->device_addr == CRSF_ADDRESS_CRSF_TRANSMITTER) //Headset to TX
+    {
+        if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+        {
+            packetChannelsPacked(hdr);
         }
     }
 }
