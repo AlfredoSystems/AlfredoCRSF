@@ -88,22 +88,22 @@ typedef struct crsf_header_s
 
 typedef struct crsf_channels_s
 {
-    unsigned ch0 : 11;
-    unsigned ch1 : 11;
-    unsigned ch2 : 11;
-    unsigned ch3 : 11;
-    unsigned ch4 : 11;
-    unsigned ch5 : 11;
-    unsigned ch6 : 11;
-    unsigned ch7 : 11;
-    unsigned ch8 : 11;
-    unsigned ch9 : 11;
-    unsigned ch10 : 11;
-    unsigned ch11 : 11;
-    unsigned ch12 : 11;
-    unsigned ch13 : 11;
-    unsigned ch14 : 11;
-    unsigned ch15 : 11;
+    uint16_t ch0 : 11;
+    uint16_t ch1 : 11;
+    uint16_t ch2 : 11;
+    uint16_t ch3 : 11;
+    uint16_t ch4 : 11;
+    uint16_t ch5 : 11;
+    uint16_t ch6 : 11;
+    uint16_t ch7 : 11;
+    uint16_t ch8 : 11;
+    uint16_t ch9 : 11;
+    uint16_t ch10 : 11;
+    uint16_t ch11 : 11;
+    uint16_t ch12 : 11;
+    uint16_t ch13 : 11;
+    uint16_t ch14 : 11;
+    uint16_t ch15 : 11;
 } PACKED crsf_channels_t;
 
 typedef struct crsfPayloadLinkstatistics_s
@@ -122,10 +122,10 @@ typedef struct crsfPayloadLinkstatistics_s
 
 typedef struct crsf_sensor_battery_s
 {
-    unsigned voltage : 16;  // V * 10 big endian
-    unsigned current : 16;  // A * 10 big endian
-    unsigned capacity : 24; // mah big endian
-    unsigned remaining : 8; // %
+    uint16_t voltage : 16;  // V * 10 big endian
+    uint16_t current : 16;  // A * 10 big endian
+    uint32_t capacity : 24; // mah big endian
+    uint8_t remaining : 8; // %
 } PACKED crsf_sensor_battery_t;
 
 typedef struct crsf_sensor_gps_s
