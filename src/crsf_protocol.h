@@ -157,40 +157,19 @@ typedef struct crsf_sensor_attitude_s
     uint16_t yaw;  // yaw in radians, BigEndian
 } PACKED crsf_sensor_attitude_t;
 
-#if !defined(__linux__)
-static inline uint16_t htobe16(uint16_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap16(val);
+// Use standard byte order macros for better portability
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) || !defined(__ORDER_BIG_ENDIAN__)
+#error "Compiler does not define __BYTE_ORDER__"
 #endif
-}
 
-static inline uint16_t be16toh(uint16_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap16(val);
-#endif
-}
-
-static inline uint32_t htobe32(uint32_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap32(val);
-#endif
-}
-
-static inline uint32_t be32toh(uint32_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap32(val);
-#endif
-}
-#endif
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define be16toh(x) (x)
+#define be32toh(x) (x)
+#define htobe16(x) (x)
+#define htobe32(x) (x)
+#else // __ORDER_LITTLE_ENDIAN__
+#define be16toh(x) __builtin_bswap16(x)
+#define be32toh(x) __builtin_bswap32(x)
+#define htobe16(x) __builtin_bswap16(x)
+#define htobe32(x) __builtin_bswap32(x)
+#endif // __BYTE_ORDER__

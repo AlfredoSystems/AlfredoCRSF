@@ -28,7 +28,7 @@ void AlfredoCRSF::handleSerialIn()
         _rxBuf[_rxBufPos++] = b;
         handleByteReceived();
 
-        if (_rxBufPos == (sizeof(_rxBuf)/sizeof(_rxBuf[0])))
+        if (_rxBufPos >= sizeof(_rxBuf))
         {
             // Packet buffer filled and no valid packet found, dump the whole thing
             _rxBufPos = 0;

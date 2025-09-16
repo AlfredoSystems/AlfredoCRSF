@@ -25,7 +25,7 @@ public:
     void clear()
     {
         _counter = 0;
-        memset(_data, 0, sizoe(_data));
+        memset(_data, 0, sizeof(_data));
     }
 
     /**
