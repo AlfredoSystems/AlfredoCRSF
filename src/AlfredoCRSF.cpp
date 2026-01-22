@@ -122,6 +122,13 @@ void AlfredoCRSF::processPacketIn(uint8_t len)
             packetChannelsPacked(hdr);
         }
     }
+    else if (hdr->device_addr == CRSF_ADDRESS_RADIO_TRANSMITTER) //Telemetry to TX (Backpack
+        {
+            if (hdr->type == CRSF_FRAMETYPE_ATTITUDE)
+            {
+                packetAttitude(hdr);
+            }
+        }
 }
 
 // Shift the bytes in the RxBuf down by cnt bytes
