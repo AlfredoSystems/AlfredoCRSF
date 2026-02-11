@@ -1,12 +1,20 @@
 # AlfredoCRSF - CSRF serial protocol Arduino library
 
-This repo is based on CapnBry's CRSF code, it has been modified to match the format of standard Arduino Library. Keywords and example files included. It has also now been extended to support more telemetry packet types. Check out the example files to learn more.
+This library is based on CapnBry's CRSF code, it has been modified to match the format of standard Arduino Library. Keywords and example files included. It has also now been extended to support more telemetry packet types. Check out the example files to learn more.
+
+This library was designed for ELRS but should be compatible with any CRSF receiver.
 
 TODO:
 * For now callbacks have been removed. May add them back or replace with a flag system to alert when packets come in.
 * Improve battery telemetry example by using all 24 capacity bits. (currently just 16 bits are used)
 * Lib supports BaroAltitude packets but EdgeTX seems to not be able to parse them if Altitude is included.
 * GPS heading seems to have some overflow issues in EdgeTX.
+
+# Hardware requirements
+
+This library is designed for ESP32. CRSF works best when you can access Serial Hardware peripherals that can achieve high baudrates (up to 420000). At least two serial peripherals are preferred, it is best to leave an MCUs default serial peripherals (the Serial object) for printing and debugging, and a second high speed peripheral for CRSF.
+
+This library should work on other MCUS like ATmega32U4/RP2040/STM32 but these are untested, attempt at your own risk. Avoid weak MCUs like atmega328p.
 
 # CRSF protocol specification
 
