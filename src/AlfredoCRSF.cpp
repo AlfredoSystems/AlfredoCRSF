@@ -48,8 +48,9 @@ void AlfredoCRSF::handleByteReceived()
         if (_rxBufPos > 1)
         {
             uint8_t len = _rxBuf[1];
-            // Sanity check the declared length, can't be shorter than Type, X, CRC
-            if (len < 3 || len > CRSF_MAX_PACKET_LEN)
+            // Length covers Type + payload + CRC. ELRS 4.0 (PR #3429) allows
+            // broadcast frames with zero payload, so the minimum value is 2.
+            if (len < 2 || len > (CRSF_MAX_PACKET_LEN - 2))
             {
                 shiftRxBuffer(1);
                 reprocess = true;
@@ -94,6 +95,9 @@ void AlfredoCRSF::checkLinkDown()
 void AlfredoCRSF::processPacketIn(uint8_t len)
 {
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
+    // ELRS 4.0 forces 0xC8 (CRSF_SYNC_BYTE / FLIGHT_CONTROLLER) on the serial
+    // wire for every frame, including ATTITUDE which used to be addressed to
+    // RADIO_TRANSMITTER. Handle ATTITUDE here so it parses on a 4.0 RX.
     if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) //Rx to FC
     {
         switch (hdr->type)
@@ -113,8 +117,11 @@ void AlfredoCRSF::processPacketIn(uint8_t len)
         case CRSF_FRAMETYPE_VARIO:
             packetVario(hdr);
             break;
+        case CRSF_FRAMETYPE_ATTITUDE:
+            packetAttitude(hdr);
+            break;
         }
-    } 
+    }
     else if (hdr->device_addr == CRSF_ADDRESS_CRSF_TRANSMITTER) //Headset to TX
     {
         if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)

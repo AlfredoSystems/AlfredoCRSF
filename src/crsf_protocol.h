@@ -33,38 +33,30 @@ typedef enum
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
-    //CRSF_FRAMETYPE_HEARTBEAT = 0x0B,                   //no need to support? (rev07)
-    //CRSF_FRAMETYPE_VIDEO_TRANSMITTER = 0x0F,           //no need to support? (rev07)
+    CRSF_FRAMETYPE_AIRSPEED = 0x0A,
+    CRSF_FRAMETYPE_HEARTBEAT = 0x0B,
+    CRSF_FRAMETYPE_RPM = 0x0C,
+    CRSF_FRAMETYPE_TEMP = 0x0D,
+    CRSF_FRAMETYPE_CELLS = 0x0E,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
-    // CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,               //not in edgeTX
-    // CRSF_FRAMETYPE_RADIO_ID = 0x3A,                  //no need to support?
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
-    // CRSF_FRAMETYPE_LINK_RX_ID = 0x1C,                 //no need to support?
-    // CRSF_FRAMETYPE_LINK_TX_ID = 0x1D,                 //no need to support?
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
-    // CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,               //no need to support?
+    CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
   // Extended Header Frames, range: 0x28 to 0x96
-    // CRSF_FRAMETYPE_DEVICE_PING = 0x28,               //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_DEVICE_INFO = 0x29,               //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,  //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_COMMAND = 0x32,                   //no "flight controller" needs to know about this
-  // KISS frames
-    // CRSF_FRAMETYPE_KISS_REQ  = 0x78,                 //not in edgeTX
-    // CRSF_FRAMETYPE_KISS_RESP = 0x79,                 //not in edgeTX
-  // MSP commands
-    // CRSF_FRAMETYPE_MSP_REQ = 0x7A,                   //not in edgeTX
-    // CRSF_FRAMETYPE_MSP_RESP = 0x7B,                  //not in edgeTX
-    // CRSF_FRAMETYPE_MSP_WRITE = 0x7C,                 //not in edgeTX
-  // Ardupilot frames
-    // CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,
+    CRSF_FRAMETYPE_DEVICE_PING = 0x28,
+    CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
+    CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
+    CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
+    CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
+    CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, // ELRS good/bad packet count and status flags
+    CRSF_FRAMETYPE_COMMAND = 0x32,
 } crsf_frame_type_e;
 
 typedef enum
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
+    CRSF_ADDRESS_BLUETOOTH_WIFI = 0x12,
     CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
     CRSF_ADDRESS_RESERVED1 = 0x8A,
     CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
@@ -76,6 +68,7 @@ typedef enum
     CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
+    CRSF_ADDRESS_ELRS_LUA = 0xEF,
 } crsf_addr_e;
 
 typedef struct crsf_header_s
@@ -106,6 +99,11 @@ typedef struct crsf_channels_s
     uint16_t ch15 : 11;
 } PACKED crsf_channels_t;
 
+// ELRS appends an extra status byte after crsf_channels_t in the extended
+// CHANNELS_PACKED frame; we ignore it but accept the larger payload size.
+#define CRSF_CHANNELS_STATUS_ARMED              (1 << 0)
+#define CRSF_CHANNELS_STATUS_ARMING_MODE_CH5    (1 << 1)
+
 typedef struct crsfPayloadLinkstatistics_s
 {
     uint8_t uplink_RSSI_1;
@@ -115,10 +113,10 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t active_antenna;
     uint8_t rf_Mode;
     uint8_t uplink_TX_Power;
-    uint8_t downlink_RSSI;
+    uint8_t downlink_RSSI;        // ELRS 4.0 calls this downlink_RSSI_1
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
-} crsfLinkStatistics_t;
+} PACKED crsfLinkStatistics_t;
 
 typedef struct crsf_sensor_battery_s
 {
@@ -152,9 +150,9 @@ typedef struct crsf_sensor_baro_altitude_s
 
 typedef struct crsf_sensor_attitude_s
 {
-    uint16_t pitch;  // pitch in radians, BigEndian
-    uint16_t roll;  // roll in radians, BigEndian
-    uint16_t yaw;  // yaw in radians, BigEndian
+    int16_t pitch; // radians * 10000, BigEndian
+    int16_t roll;  // radians * 10000, BigEndian
+    int16_t yaw;   // radians * 10000, BigEndian
 } PACKED crsf_sensor_attitude_t;
 
 // Use standard byte order macros for better portability
