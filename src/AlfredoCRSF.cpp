@@ -4,7 +4,7 @@ AlfredoCRSF::AlfredoCRSF() :
     _crc(0xd5),
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false)
 {
-     
+
 }
 
 void AlfredoCRSF::begin(Stream &port)
@@ -96,25 +96,11 @@ void AlfredoCRSF::processPacketIn(uint8_t len)
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
     if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) //Rx to FC
     {
-        switch (hdr->type)
+        if (!processTelemetryPacketIn(hdr) && hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
         {
-        case CRSF_FRAMETYPE_GPS:
-            packetGps(hdr);
-            break;
-        case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
             packetChannelsPacked(hdr);
-            break;
-        case CRSF_FRAMETYPE_LINK_STATISTICS:
-            packetLinkStatistics(hdr);
-            break;
-        case CRSF_FRAMETYPE_BARO_ALTITUDE:
-            packetBaroAltitude(hdr);
-            break;
-        case CRSF_FRAMETYPE_VARIO:
-            packetVario(hdr);
-            break;
         }
-    } 
+    }
     else if (hdr->device_addr == CRSF_ADDRESS_CRSF_TRANSMITTER) //Headset to TX
     {
         if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
@@ -122,13 +108,50 @@ void AlfredoCRSF::processPacketIn(uint8_t len)
             packetChannelsPacked(hdr);
         }
     }
-    else if (hdr->device_addr == CRSF_ADDRESS_RADIO_TRANSMITTER) //Telemetry to TX (Backpack
-        {
-            if (hdr->type == CRSF_FRAMETYPE_ATTITUDE)
-            {
-                packetAttitude(hdr);
-            }
-        }
+    else if (hdr->device_addr == CRSF_ADDRESS_RADIO_TRANSMITTER) //Telemetry to TX (Backpack)
+    {
+        processTelemetryPacketIn(hdr);
+    }
+}
+
+// Handle telemetry frame types common to the FC and backpack directions.
+// Returns true if the frame type was recognized and handled.
+bool AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
+{
+    switch (hdr->type)
+    {
+    case CRSF_FRAMETYPE_GPS:
+        packetGps(hdr);
+        return true;
+    case CRSF_FRAMETYPE_GPS_TIME:
+        packetGpsTime(hdr);
+        return true;
+    case CRSF_FRAMETYPE_LINK_STATISTICS:
+        packetLinkStatistics(hdr);
+        return true;
+    case CRSF_FRAMETYPE_BARO_ALTITUDE:
+        packetBaroAltitude(hdr);
+        return true;
+    case CRSF_FRAMETYPE_VARIO:
+        packetVario(hdr);
+        return true;
+    case CRSF_FRAMETYPE_ATTITUDE:
+        packetAttitude(hdr);
+        return true;
+    case CRSF_FRAMETYPE_AIRSPEED:
+        packetAirspeed(hdr);
+        return true;
+    case CRSF_FRAMETYPE_RPM:
+        packetRpm(hdr);
+        return true;
+    case CRSF_FRAMETYPE_TEMP:
+        packetTemp(hdr);
+        return true;
+    case CRSF_FRAMETYPE_CELLS:
+        packetCells(hdr);
+        return true;
+    }
+    return false;
 }
 
 // Shift the bytes in the RxBuf down by cnt bytes
@@ -215,6 +238,81 @@ void AlfredoCRSF::packetAttitude(const crsf_header_t *p)
     _attitudeSensor.pitch = be16toh(attitude->pitch);
     _attitudeSensor.roll = be16toh(attitude->roll);
     _attitudeSensor.yaw = be16toh(attitude->yaw);
+}
+
+void AlfredoCRSF::packetGpsTime(const crsf_header_t *p)
+{
+    const crsf_sensor_gps_time_t *gpsTime = (crsf_sensor_gps_time_t *)p->data;
+    _gpsTimeSensor.year = be16toh(gpsTime->year);
+    _gpsTimeSensor.month = gpsTime->month;
+    _gpsTimeSensor.day = gpsTime->day;
+    _gpsTimeSensor.hour = gpsTime->hour;
+    _gpsTimeSensor.minute = gpsTime->minute;
+    _gpsTimeSensor.second = gpsTime->second;
+    _gpsTimeSensor.millisecond = be16toh(gpsTime->millisecond);
+}
+
+void AlfredoCRSF::packetAirspeed(const crsf_header_t *p)
+{
+    const crsf_sensor_airspeed_t *airspeed = (crsf_sensor_airspeed_t *)p->data;
+    _airspeedSensor.speed = be16toh(airspeed->speed);
+}
+
+// RPM, TEMP and CELLS frames are variable length: source_id followed by
+// 1-N values, where the count comes from the frame length
+void AlfredoCRSF::packetRpm(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_TYPE_CRC;
+    if (payloadLen < 1 + 3)
+        return;
+    _rpmSensor.source_id = p->data[0];
+    uint8_t count = (payloadLen - 1) / 3;
+    if (count > CRSF_MAX_RPM_VALUES)
+        count = CRSF_MAX_RPM_VALUES;
+    _rpmSensor.rpm_count = count;
+    for (uint8_t i = 0; i < count; ++i)
+    {
+        const uint8_t *v = &p->data[1 + i * 3];
+        // Signed 24-bit big endian
+        int32_t rpm = ((int32_t)v[0] << 16) | ((int32_t)v[1] << 8) | v[2];
+        if (rpm & 0x800000)
+            rpm |= 0xFF000000;
+        _rpmSensor.rpm[i] = rpm;
+    }
+}
+
+void AlfredoCRSF::packetTemp(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_TYPE_CRC;
+    if (payloadLen < 1 + 2)
+        return;
+    _tempSensor.source_id = p->data[0];
+    uint8_t count = (payloadLen - 1) / 2;
+    if (count > CRSF_MAX_TEMP_VALUES)
+        count = CRSF_MAX_TEMP_VALUES;
+    _tempSensor.temp_count = count;
+    for (uint8_t i = 0; i < count; ++i)
+    {
+        const uint8_t *v = &p->data[1 + i * 2];
+        _tempSensor.temperature[i] = (int16_t)(((uint16_t)v[0] << 8) | v[1]);
+    }
+}
+
+void AlfredoCRSF::packetCells(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_TYPE_CRC;
+    if (payloadLen < 1 + 2)
+        return;
+    _cellsSensor.source_id = p->data[0];
+    uint8_t count = (payloadLen - 1) / 2;
+    if (count > CRSF_MAX_CELL_VALUES)
+        count = CRSF_MAX_CELL_VALUES;
+    _cellsSensor.cell_count = count;
+    for (uint8_t i = 0; i < count; ++i)
+    {
+        const uint8_t *v = &p->data[1 + i * 2];
+        _cellsSensor.cell[i] = ((uint16_t)v[0] << 8) | v[1];
+    }
 }
 
 void AlfredoCRSF::write(uint8_t b)

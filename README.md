@@ -34,9 +34,15 @@ Overall packet length is PayloadLength+4 (dest, len, type, crc), or LEN+2 (dest,
 
 ### TYPE - CRSF_FRAMETYPE
 * CRSF_FRAMETYPE_GPS = 0x02,
+* CRSF_FRAMETYPE_GPS_TIME = 0x03,
 * CRSF_FRAMETYPE_VARIO = 0x07,
 * CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
 * CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
+* CRSF_FRAMETYPE_AIRSPEED = 0x0A,
+* CRSF_FRAMETYPE_HEARTBEAT = 0x0B,
+* CRSF_FRAMETYPE_RPM = 0x0C,
+* CRSF_FRAMETYPE_TEMP = 0x0D,
+* CRSF_FRAMETYPE_CELLS = 0x0E,
 * CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
 * CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
 * CRSF_FRAMETYPE_RADIO_ID = 0x3A,
@@ -73,6 +79,15 @@ Includes all bytes from type (buffer[2]) to end of payload.
 * uint16_t heading;      // GPS heading, degree/100 big endian
 * uint16_t altitude;     // meters, +1000m big endian
 * uint8_t satellites;    // satellites
+### CRSF_FRAMETYPE_GPS_TIME = 0x03
+Used to synchronize the handset clock (sent by e.g. Betaflight 2026.06+, requires ELRS 4.1+ to pass through).
+* int16_t year;          // BigEndian
+* uint8_t month;
+* uint8_t day;
+* uint8_t hour;
+* uint8_t minute;
+* uint8_t second;
+* uint16_t millisecond;  // BigEndian
 ### CRSF_FRAMETYPE_VARIO = 0x07
 * int16_t verticalspd;   // Vertical speed in cm/s, BigEndian
 ### CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08
@@ -83,8 +98,22 @@ Includes all bytes from type (buffer[2]) to end of payload.
 ### CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09
 * uint16_t altitude;     // Altitude in decimeters + 10000dm, or Altitude in meters if high bit is set, BigEndian
 * int16_t verticalspd;   // Vertical speed in cm/s, BigEndian
+### CRSF_FRAMETYPE_AIRSPEED = 0x0A
+* uint16_t speed;        // Airspeed in 0.1 * km/h (hectometers/h), BigEndian
 ### CRSF_FRAMETYPE_HEARTBEAT = 0x0B
-* uint8_t Origin Device address;
+* int16_t Origin Device address; // BigEndian (used for device discovery by the ELRS 4.0 CRSF router)
+### CRSF_FRAMETYPE_RPM = 0x0C
+Variable length, count of values determined by frame length.
+* uint8_t source_id;     // e.g. 0 = Motor 1, 1 = Motor 2, etc.
+* int24_t rpm[1-19];     // Signed 24-bit RPM values BigEndian, negative = reverse
+### CRSF_FRAMETYPE_TEMP = 0x0D
+Variable length, count of values determined by frame length.
+* uint8_t source_id;     // e.g. 0 = FC including all ESCs, 1 = Ambient, etc.
+* int16_t temperature[1-20]; // Deci-degrees Celsius BigEndian (250 = 25.0C)
+### CRSF_FRAMETYPE_CELLS = 0x0E
+Variable length, count of values determined by frame length. ELRS 4.0+ receivers with VBAT sensing send this with source_id 128 for millivolt-precision voltage.
+* uint8_t source_id;     // e.g. 0 = battery 1, 1 = battery 2, etc.
+* uint16_t cell[1-29];   // Cell voltage in millivolts BigEndian (3850 = 3.850V)
 ### CRSF_FRAMETYPE_VIDEO_TRANSMITTER = 0x0F
 * uint8_t Origin address;
 * uint8_t Status;
