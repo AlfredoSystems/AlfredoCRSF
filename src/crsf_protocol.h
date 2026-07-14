@@ -152,9 +152,9 @@ typedef struct crsf_sensor_baro_altitude_s
 
 typedef struct crsf_sensor_attitude_s
 {
-    uint16_t pitch;  // pitch in radians, BigEndian
-    uint16_t roll;  // roll in radians, BigEndian
-    uint16_t yaw;  // yaw in radians, BigEndian
+    int16_t pitch;  // pitch in radians * 10000, BigEndian
+    int16_t roll;   // roll in radians * 10000, BigEndian
+    int16_t yaw;    // yaw in radians * 10000, BigEndian
 } PACKED crsf_sensor_attitude_t;
 
 // Use standard byte order macros for better portability

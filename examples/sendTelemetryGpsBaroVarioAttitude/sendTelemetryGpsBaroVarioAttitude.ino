@@ -66,8 +66,8 @@ void sendAttitude(float pitch, float roll, float yaw)
   crsf_sensor_attitude_t crsfAttitude = { 0 };
 
   // Values are MSB first (BigEndian)
-  crsfAttitude.pitch = htobe16((uint16_t)(pitch*10000.0));
-  crsfAttitude.roll = htobe16((uint16_t)(roll*10000.0));
-  crsfAttitude.yaw = htobe16((uint16_t)(yaw*10000.0));
+  crsfAttitude.pitch = htobe16((int16_t)(pitch*10000.0));
+  crsfAttitude.roll = htobe16((int16_t)(roll*10000.0));
+  crsfAttitude.yaw = htobe16((int16_t)(yaw*10000.0));
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_ATTITUDE, &crsfAttitude, sizeof(crsfAttitude));
 }
