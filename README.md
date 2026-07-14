@@ -155,6 +155,10 @@ Variable length, count of values determined by frame length. ELRS 4.0+ receivers
 * unsigned ch13 : 11;
 * unsigned ch14 : 11;
 * unsigned ch15 : 11;
+
+ELRS 4.0+ handsets (EdgeTX 2.11+) may append one status byte after the packed channels:
+* bit 0: CRSF_CHANNELS_STATUS_ARMED - commanded armed status in Arm using Switch mode
+* bit 1: CRSF_CHANNELS_STATUS_ARMING_MODE_CH5 - arm via CH5 instead of the armed bit
 ### CRSF_FRAMETYPE_LINK_RX_ID = 0x1C
 * uint8_t rxRssiPercent; 
 * uint8_t rxRfPower;  //should be signed int?

@@ -36,6 +36,14 @@ public:
     const crsf_sensor_cells_t *getCellsSensor() const { return &_cellsSensor; }
     bool isLinkUp() const { return _linkIsUp; }
 
+    // ELRS 4.0+ (EdgeTX 2.11+) appends an optional status byte to channels
+    // packets from the handset (see CRSF_CHANNELS_STATUS_* bits)
+    bool hasChannelsStatus() const { return _hasChannelsStatus; }
+    uint8_t getChannelsStatus() const { return _channelsStatus; }
+    // Commanded arm state, mirroring ELRS logic: uses the status byte in Arm
+    // using Switch mode, otherwise falls back to channel 5 (AUX1) position
+    bool isArmed() const;
+
 private:
     Stream* _port;
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
@@ -56,6 +64,8 @@ private:
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
     bool _linkIsUp;
+    bool _hasChannelsStatus;
+    uint8_t _channelsStatus;
     int _channels[CRSF_NUM_CHANNELS];
 
     void handleSerialIn();
