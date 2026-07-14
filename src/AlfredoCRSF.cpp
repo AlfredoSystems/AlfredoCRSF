@@ -2,7 +2,8 @@
 
 AlfredoCRSF::AlfredoCRSF() :
     _crc(0xd5),
-    _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false)
+    _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
+    _hasChannelsStatus(false), _channelsStatus(0)
 {
 
 }
@@ -196,10 +197,34 @@ void AlfredoCRSF::packetChannelsPacked(const crsf_header_t *p)
     for (unsigned int i=0; i<CRSF_NUM_CHANNELS; ++i)
         _channels[i] = map(_channels[i], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, 1000, 2000);
 
+    // ELRS 4.0+ handsets (EdgeTX 2.11+) append an optional status byte after the packed channels
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_TYPE_CRC;
+    if (payloadLen > sizeof(crsf_channels_t))
+    {
+        _channelsStatus = p->data[sizeof(crsf_channels_t)];
+        _hasChannelsStatus = true;
+    }
+    else
+    {
+        _channelsStatus = 0;
+        _hasChannelsStatus = false;
+    }
+
     _linkIsUp = true;
     _lastChannelsPacket = millis();
 
     memcpy(&_channelsPacked, ch, sizeof(_channelsPacked));
+}
+
+bool AlfredoCRSF::isArmed() const
+{
+    if (!_linkIsUp)
+        return false;
+    // Status byte present and Arm using Switch selected: use the commanded arm bit.
+    // Otherwise (no status byte, or Arm using CH5 selected): use channel 5 position.
+    if (_hasChannelsStatus && !(_channelsStatus & CRSF_CHANNELS_STATUS_ARMING_MODE_CH5))
+        return _channelsStatus & CRSF_CHANNELS_STATUS_ARMED;
+    return getChannel(5) > 1500;
 }
 
 void AlfredoCRSF::packetLinkStatistics(const crsf_header_t *p)

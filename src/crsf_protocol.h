@@ -17,6 +17,11 @@
 #define CRSF_CHANNEL_VALUE_EXT_MAX 1984
 #define CRSF_MAX_PACKET_LEN 64
 
+// Optional status byte following the packed channels in a
+// CRSF_FRAMETYPE_RC_CHANNELS_PACKED frame (ELRS 4.0+ with EdgeTX 2.11+)
+#define CRSF_CHANNELS_STATUS_ARMED           0x01 // Armed status in Arm using Switch mode
+#define CRSF_CHANNELS_STATUS_ARMING_MODE_CH5 0x02 // Arm using CH5 if bit is set
+
 // Maximum number of values in variable-length telemetry frames
 #define CRSF_MAX_RPM_VALUES  19
 #define CRSF_MAX_TEMP_VALUES 20
