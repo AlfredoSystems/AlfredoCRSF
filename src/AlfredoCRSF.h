@@ -26,9 +26,14 @@ public:
     const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
     const crsfLinkStatistics_t *getLinkStatistics() const { return &_linkStatistics; }
     const crsf_sensor_gps_t *getGpsSensor() const { return &_gpsSensor; }
+    const crsf_sensor_gps_time_t *getGpsTimeSensor() const { return &_gpsTimeSensor; }
     const crsf_sensor_vario_t *getVarioSensor() const { return &_varioSensor; }
     const crsf_sensor_baro_altitude_t *getBaroAltitudeSensor() const { return &_baroAltitudeSensor; }
     const crsf_sensor_attitude_t *getAttitudeSensor() const { return &_attitudeSensor; }
+    const crsf_sensor_airspeed_t *getAirspeedSensor() const { return &_airspeedSensor; }
+    const crsf_sensor_rpm_t *getRpmSensor() const { return &_rpmSensor; }
+    const crsf_sensor_temp_t *getTempSensor() const { return &_tempSensor; }
+    const crsf_sensor_cells_t *getCellsSensor() const { return &_cellsSensor; }
     bool isLinkUp() const { return _linkIsUp; }
 
 private:
@@ -39,9 +44,14 @@ private:
     crsf_channels_t _channelsPacked;
     crsfLinkStatistics_t _linkStatistics;
     crsf_sensor_gps_t _gpsSensor;
+    crsf_sensor_gps_time_t _gpsTimeSensor;
     crsf_sensor_vario_t _varioSensor;
     crsf_sensor_baro_altitude_t _baroAltitudeSensor;
     crsf_sensor_attitude_t _attitudeSensor;
+    crsf_sensor_airspeed_t _airspeedSensor;
+    crsf_sensor_rpm_t _rpmSensor;
+    crsf_sensor_temp_t _tempSensor;
+    crsf_sensor_cells_t _cellsSensor;
     uint32_t _baud;
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
@@ -56,10 +66,16 @@ private:
     void checkLinkDown();
 
     // Packet RX Handlers
+    bool processTelemetryPacketIn(const crsf_header_t *p);
     void packetChannelsPacked(const crsf_header_t *p);
     void packetLinkStatistics(const crsf_header_t *p);
     void packetGps(const crsf_header_t *p);
+    void packetGpsTime(const crsf_header_t *p);
     void packetVario(const crsf_header_t *p);
     void packetBaroAltitude(const crsf_header_t *p);
     void packetAttitude(const crsf_header_t *p);
+    void packetAirspeed(const crsf_header_t *p);
+    void packetRpm(const crsf_header_t *p);
+    void packetTemp(const crsf_header_t *p);
+    void packetCells(const crsf_header_t *p);
 };

@@ -12,7 +12,15 @@
 #define CRSF_CHANNEL_VALUE_2000 1792
 #define CRSF_CHANNEL_VALUE_MAX  1811
 #define CRSF_CHANNEL_VALUE_SPAN (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN)
+// Extended limits ("E.Limits") channel range, 880us to 2120us
+#define CRSF_CHANNEL_VALUE_EXT_MIN 0
+#define CRSF_CHANNEL_VALUE_EXT_MAX 1984
 #define CRSF_MAX_PACKET_LEN 64
+
+// Maximum number of values in variable-length telemetry frames
+#define CRSF_MAX_RPM_VALUES  19
+#define CRSF_MAX_TEMP_VALUES 20
+#define CRSF_MAX_CELL_VALUES 29
 
 // Clashes with CRSF_ADDRESS_FLIGHT_CONTROLLER
 #define CRSF_SYNC_BYTE 0XC8
@@ -30,10 +38,15 @@ enum {
 typedef enum
 {
     CRSF_FRAMETYPE_GPS = 0x02,
+    CRSF_FRAMETYPE_GPS_TIME = 0x03,
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
-    //CRSF_FRAMETYPE_HEARTBEAT = 0x0B,                   //no need to support? (rev07)
+    CRSF_FRAMETYPE_AIRSPEED = 0x0A,
+    CRSF_FRAMETYPE_HEARTBEAT = 0x0B,
+    CRSF_FRAMETYPE_RPM = 0x0C,
+    CRSF_FRAMETYPE_TEMP = 0x0D,
+    CRSF_FRAMETYPE_CELLS = 0x0E,
     //CRSF_FRAMETYPE_VIDEO_TRANSMITTER = 0x0F,           //no need to support? (rev07)
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     // CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,               //not in edgeTX
@@ -65,6 +78,7 @@ typedef enum
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
+    CRSF_ADDRESS_BLUETOOTH_WIFI = 0x12,
     CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
     CRSF_ADDRESS_RESERVED1 = 0x8A,
     CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
@@ -137,6 +151,52 @@ typedef struct crsf_sensor_gps_s
     uint16_t altitude;  // meters, +1000m big endian
     uint8_t satellites; // satellites
 } PACKED crsf_sensor_gps_t;
+
+typedef struct crsf_sensor_gps_time_s
+{
+    int16_t year;        // big endian
+    uint8_t month;
+    uint8_t day;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint16_t millisecond; // big endian
+} PACKED crsf_sensor_gps_time_t;
+
+typedef struct crsf_sensor_airspeed_s
+{
+    uint16_t speed;      // Airspeed in 0.1 * km/h (hectometers/h), BigEndian
+} PACKED crsf_sensor_airspeed_t;
+
+// Decoded form of the RPM frame. On the wire the payload is source_id
+// followed by 1-19 signed 24-bit big endian RPM values; the frame length
+// determines how many values are present.
+typedef struct crsf_sensor_rpm_s
+{
+    uint8_t source_id;   // Identifies the source of the RPM data (e.g., 0 = Motor 1, 1 = Motor 2, etc.)
+    uint8_t rpm_count;   // Number of valid entries in rpm[]
+    int32_t rpm[CRSF_MAX_RPM_VALUES]; // RPM values, negative ones represent the motor spinning in reverse
+} crsf_sensor_rpm_t;
+
+// Decoded form of the TEMP frame. On the wire the payload is source_id
+// followed by 1-20 int16 big endian temperature values; the frame length
+// determines how many values are present.
+typedef struct crsf_sensor_temp_s
+{
+    uint8_t source_id;   // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    uint8_t temp_count;  // Number of valid entries in temperature[]
+    int16_t temperature[CRSF_MAX_TEMP_VALUES]; // Temperatures in deci-degree Celsius (e.g., 250 = 25.0C, -50 = -5.0C)
+} crsf_sensor_temp_t;
+
+// Decoded form of the CELLS frame. On the wire the payload is source_id
+// followed by 1-29 uint16 big endian cell voltages; the frame length
+// determines how many values are present.
+typedef struct crsf_sensor_cells_s
+{
+    uint8_t source_id;   // Identifies the source of the battery data (e.g., 0 = battery 1, 1 = battery 2, etc.)
+    uint8_t cell_count;  // Number of valid entries in cell[]
+    uint16_t cell[CRSF_MAX_CELL_VALUES]; // Cell voltages in millivolts (e.g. 3.850V = 3850)
+} crsf_sensor_cells_t;
 
 typedef struct crsf_sensor_vario_s
 {
