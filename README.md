@@ -134,9 +134,9 @@ Includes all bytes from type (buffer[2]) to end of payload.
 * uint8_t txRfPower;  //should be signed int?
 * uint8_t txFps;
 ### CRSF_FRAMETYPE_ATTITUDE = 0x1E
-* uint16_t pitch;  // pitch in radians, BigEndian
-* uint16_t roll;   // roll in radians, BigEndian
-* uint16_t yaw;    // yaw in radians, BigEndian
+* int16_t pitch;  // pitch in radians * 10000, BigEndian
+* int16_t roll;   // roll in radians * 10000, BigEndian
+* int16_t yaw;    // yaw in radians * 10000, BigEndian
 ### CRSF_FRAMETYPE_FLIGHT_MODE = 0x21
 * char[]; //Flight mode ( Null-terminated string )
 // Extended Header Frames, range: 0x28 to 0x96
