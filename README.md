@@ -175,9 +175,16 @@ ELRS 4.0+ handsets (EdgeTX 2.11+) may append one status byte after the packed ch
 * char[]; //Flight mode ( Null-terminated string )
 // Extended Header Frames, range: 0x28 to 0x96
 ### CRSF_FRAMETYPE_DEVICE_PING = 0x28,
-* ????
+Extended header frame (payload preceded by destination and origin address bytes). Device discovery request, usually sent to the broadcast address; each device answers with DEVICE_INFO.
+* (no payload)
 ### CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
-* ????
+Extended header frame. Device discovery response.
+* char name[];          // Device name (null-terminated string)
+* uint32_t serialNo;    // BigEndian
+* uint32_t hardwareVer; // BigEndian
+* uint32_t softwareVer; // BigEndian
+* uint8_t fieldCnt;     // number of configuration parameters this device has
+* uint8_t parameterVersion;
 ### CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
 * ????
 ### CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,

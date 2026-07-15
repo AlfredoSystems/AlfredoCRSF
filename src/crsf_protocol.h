@@ -27,6 +27,7 @@
 #define CRSF_MAX_TEMP_VALUES 20
 #define CRSF_MAX_CELL_VALUES 29
 #define CRSF_ELRS_STATUS_MSG_LEN 56
+#define CRSF_DEVICE_NAME_MAX 32
 
 // Flag bits in the ELRS_STATUS flags field
 #define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
@@ -70,8 +71,8 @@ typedef enum
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
     // CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,               //no need to support?
   // Extended Header Frames, range: 0x28 to 0x96
-    // CRSF_FRAMETYPE_DEVICE_PING = 0x28,               //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_DEVICE_INFO = 0x29,               //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_DEVICE_PING = 0x28,                  //device discovery request (extended header frame)
+    CRSF_FRAMETYPE_DEVICE_INFO = 0x29,                  //device discovery response (extended header frame)
     // CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,  //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this

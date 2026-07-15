@@ -1,7 +1,7 @@
 #include <AlfredoCRSF.h>
 
 AlfredoCRSF::AlfredoCRSF() :
-    _deviceAddr(CRSF_ADDRESS_FLIGHT_CONTROLLER),
+    _deviceAddr(CRSF_ADDRESS_FLIGHT_CONTROLLER), _deviceName(NULL),
     _crc(0xd5),
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
     _hasChannelsStatus(false), _channelsStatus(0)
@@ -163,6 +163,13 @@ void AlfredoCRSF::processExtendedPacketIn(const crsf_header_t *hdr)
     case CRSF_FRAMETYPE_ELRS_STATUS:
         packetElrsStatus(hdr);
         break;
+    case CRSF_FRAMETYPE_DEVICE_PING:
+    {
+        const crsf_ext_header_t *ext = (const crsf_ext_header_t *)hdr;
+        if (_deviceName && (ext->dest_addr == _deviceAddr || ext->dest_addr == CRSF_ADDRESS_BROADCAST))
+            sendDeviceInfo(ext->orig_addr);
+        break;
+    }
     }
 }
 
@@ -420,4 +427,44 @@ void AlfredoCRSF::writeChannels(uint8_t addr, const crsf_channels_t *channels, u
     memcpy(payload, channels, sizeof(crsf_channels_t));
     payload[sizeof(crsf_channels_t)] = status;
     writePacket(addr, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, payload, sizeof(payload));
+}
+
+void AlfredoCRSF::writeExtPacket(uint8_t type, uint8_t destAddr, const void *payload, uint8_t len)
+{
+    if (len > CRSF_MAX_PACKET_LEN - 2)
+        return;
+    uint8_t buf[CRSF_MAX_PACKET_LEN];
+    buf[0] = destAddr;
+    buf[1] = _deviceAddr;
+    memcpy(&buf[2], payload, len);
+    writePacket(CRSF_SYNC_BYTE, type, buf, len + 2);
+}
+
+void AlfredoCRSF::sendHeartbeat()
+{
+    // Payload is the origin device address as a big endian int16
+    uint8_t payload[2] = { 0, _deviceAddr };
+    writePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_HEARTBEAT, payload, sizeof(payload));
+}
+
+void AlfredoCRSF::setDeviceName(const char *name)
+{
+    _deviceName = name;
+}
+
+// DEVICE_INFO payload: null-terminated device name, then serial number,
+// hardware and software version (uint32 big endian), field count and
+// parameter version. We report no configuration fields.
+void AlfredoCRSF::sendDeviceInfo(uint8_t destAddr)
+{
+    uint8_t payload[CRSF_DEVICE_NAME_MAX + 1 + 14];
+    uint8_t nameLen = 0;
+    while (_deviceName[nameLen] && nameLen < CRSF_DEVICE_NAME_MAX)
+    {
+        payload[nameLen] = _deviceName[nameLen];
+        nameLen++;
+    }
+    payload[nameLen++] = '\0';
+    memset(&payload[nameLen], 0, 14);
+    writeExtPacket(CRSF_FRAMETYPE_DEVICE_INFO, destAddr, payload, nameLen + 14);
 }

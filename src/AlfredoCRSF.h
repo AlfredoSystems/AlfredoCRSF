@@ -34,6 +34,19 @@ public:
     // so only use this against a 4.0+ module with Switch arming selected.
     void writeChannels(uint8_t addr, const crsf_channels_t *channels, uint8_t status);
 
+    // Send an extended header frame (type 0x28-0x96) from this device's
+    // address to destAddr. payload/len exclude the dest/origin bytes.
+    void writeExtPacket(uint8_t type, uint8_t destAddr, const void *payload, uint8_t len);
+
+    // Announce this device to the CRSF router for device discovery.
+    // Call periodically (e.g. once per second); optional.
+    void sendHeartbeat();
+
+    // Respond to CRSF device discovery pings with the given device name, so
+    // this device shows up to the router and configuration tools. The string
+    // is not copied and must remain valid. Pass NULL to disable (default).
+    void setDeviceName(const char *name);
+
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
     const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
@@ -61,6 +74,7 @@ public:
 private:
     Stream* _port;
     uint8_t _deviceAddr;
+    const char *_deviceName;
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
     uint8_t _rxBufPos;
     Crc8 _crc;
@@ -106,4 +120,6 @@ private:
     void packetTemp(const crsf_header_t *p);
     void packetCells(const crsf_header_t *p);
     void packetElrsStatus(const crsf_header_t *p);
+
+    void sendDeviceInfo(uint8_t destAddr);
 };
