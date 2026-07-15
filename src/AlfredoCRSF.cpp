@@ -398,3 +398,18 @@ void AlfredoCRSF::writePacket(uint8_t addr, uint8_t type, const void *payload, u
     buf[len+3] = _crc.calc(&buf[2], len + 1);
     write(buf, len + 4);
 }
+
+void AlfredoCRSF::writeChannels(uint8_t addr, const crsf_channels_t *channels)
+{
+    writePacket(addr, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, channels, sizeof(crsf_channels_t));
+}
+
+void AlfredoCRSF::writeChannels(uint8_t addr, const crsf_channels_t *channels, uint8_t status)
+{
+    // ELRS 4.0 extended channels frame: the packed channels followed by one
+    // status byte (CRSF_CHANNELS_STATUS_* bits)
+    uint8_t payload[sizeof(crsf_channels_t) + 1];
+    memcpy(payload, channels, sizeof(crsf_channels_t));
+    payload[sizeof(crsf_channels_t)] = status;
+    writePacket(addr, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, payload, sizeof(payload));
+}

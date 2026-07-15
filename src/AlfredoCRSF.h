@@ -21,6 +21,16 @@ public:
     void queuePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
     void writePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
 
+    // Send a packed channels frame. addr is the leading byte: use CRSF_SYNC_BYTE
+    // when sending to a flight controller, CRSF_ADDRESS_CRSF_TRANSMITTER when
+    // sending to a TX module as a handset would.
+    void writeChannels(uint8_t addr, const crsf_channels_t *channels);
+    // ELRS 4.0+ TX modules only: also appends the channels status byte
+    // (CRSF_CHANNELS_STATUS_* bits) carrying the commanded arm state for Arm
+    // using Switch mode. ELRS 3.x modules do not understand the longer frame,
+    // so only use this against a 4.0+ module with Switch arming selected.
+    void writeChannels(uint8_t addr, const crsf_channels_t *channels, uint8_t status);
+
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
     const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
