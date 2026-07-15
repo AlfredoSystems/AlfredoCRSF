@@ -151,6 +151,9 @@ bool AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
     case CRSF_FRAMETYPE_CELLS:
         packetCells(hdr);
         return true;
+    case CRSF_FRAMETYPE_ELRS_STATUS:
+        packetElrsStatus(hdr);
+        return true;
     }
     return false;
 }
@@ -321,6 +324,25 @@ void AlfredoCRSF::packetTemp(const crsf_header_t *p)
         const uint8_t *v = &p->data[1 + i * 2];
         _tempSensor.temperature[i] = (int16_t)(((uint16_t)v[0] << 8) | v[1]);
     }
+}
+
+// ELRS_STATUS is an extended header frame: two extended routing bytes
+// (destination, origin) precede the payload
+void AlfredoCRSF::packetElrsStatus(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+    if (payloadLen < 4)
+        return;
+    const uint8_t *payload = &p->data[2]; // skip extended dest/origin
+    _elrsStatus.pktsBad = payload[0];
+    _elrsStatus.pktsGood = ((uint16_t)payload[1] << 8) | payload[2];
+    _elrsStatus.flags = payload[3];
+
+    uint8_t msgLen = payloadLen - 4;
+    if (msgLen > CRSF_ELRS_STATUS_MSG_LEN)
+        msgLen = CRSF_ELRS_STATUS_MSG_LEN;
+    memcpy(_elrsStatus.msg, &payload[4], msgLen);
+    _elrsStatus.msg[msgLen] = '\0';
 }
 
 void AlfredoCRSF::packetCells(const crsf_header_t *p)

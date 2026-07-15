@@ -57,6 +57,7 @@ Overall packet length is PayloadLength+4 (dest, len, type, crc), or LEN+2 (dest,
 * CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
 * CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
 * CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
+* CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,
 * CRSF_FRAMETYPE_COMMAND = 0x32,
 // KISS frames
 * CRSF_FRAMETYPE_KISS_REQ  = 0x78,
@@ -183,6 +184,12 @@ ELRS 4.0+ handsets (EdgeTX 2.11+) may append one status byte after the packed ch
 * ????
 ### CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 * ????
+### CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,
+Extended header frame (payload preceded by destination and origin address bytes). Sent by an ELRS TX module to the handset.
+* uint8_t pktsBad;
+* uint16_t pktsGood; // BigEndian
+* uint8_t flags;     // bit 0: connected, bit 2: model mismatch warning, bit 3: armed warning, bit 5: error - change blocked while connected, bit 6: error - baud rate too low
+* char msg[];        // Warning message (null-terminated string)
 ### CRSF_FRAMETYPE_COMMAND = 0x32,
 * ????
 // KISS frames

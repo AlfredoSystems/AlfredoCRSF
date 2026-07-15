@@ -26,6 +26,14 @@
 #define CRSF_MAX_RPM_VALUES  19
 #define CRSF_MAX_TEMP_VALUES 20
 #define CRSF_MAX_CELL_VALUES 29
+#define CRSF_ELRS_STATUS_MSG_LEN 56
+
+// Flag bits in the ELRS_STATUS flags field
+#define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
+#define CRSF_ELRS_FLAG_MODEL_MATCH_WARN  0x04 // warning: model mismatch
+#define CRSF_ELRS_FLAG_ARMED             0x08 // warning: armed
+#define CRSF_ELRS_FLAG_ERROR_CONNECTED   0x20 // critical: change blocked while connected
+#define CRSF_ELRS_FLAG_ERROR_BAUDRATE    0x40 // critical: baud rate too low
 
 // Clashes with CRSF_ADDRESS_FLIGHT_CONTROLLER
 #define CRSF_SYNC_BYTE 0XC8
@@ -67,6 +75,7 @@ typedef enum
     // CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,  //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,                  //ELRS good/bad packet count and status flags (extended header frame)
     // CRSF_FRAMETYPE_COMMAND = 0x32,                   //no "flight controller" needs to know about this
   // KISS frames
     // CRSF_FRAMETYPE_KISS_REQ  = 0x78,                 //not in edgeTX
@@ -214,6 +223,17 @@ typedef struct crsf_sensor_baro_altitude_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_altitude_t;
 
+
+// Decoded form of the ELRS_STATUS frame (extended header, TX module to
+// handset). On the wire the payload is pktsBad, pktsGood (big endian),
+// flags, then a variable-length null-terminated message string.
+typedef struct crsf_elrs_status_s
+{
+    uint8_t pktsBad;   // Bad packet count
+    uint16_t pktsGood; // Good packet count
+    uint8_t flags;     // CRSF_ELRS_FLAG_* bits
+    char msg[CRSF_ELRS_STATUS_MSG_LEN + 1]; // Warning message, null-terminated
+} crsf_elrs_status_t;
 
 typedef struct crsf_sensor_attitude_s
 {
