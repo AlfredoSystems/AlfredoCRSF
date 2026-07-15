@@ -29,6 +29,9 @@
 #define CRSF_ELRS_STATUS_MSG_LEN 56
 #define CRSF_DEVICE_NAME_MAX 32
 
+// Subcommand in the first payload byte of a HANDSET (0x3A) frame
+#define CRSF_HANDSET_SUBCMD_TIMING 0x10
+
 // Flag bits in the ELRS_STATUS flags field
 #define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
 #define CRSF_ELRS_FLAG_MODEL_MATCH_WARN  0x04 // warning: model mismatch
@@ -64,7 +67,6 @@ typedef enum
     //CRSF_FRAMETYPE_VIDEO_TRANSMITTER = 0x0F,           //no need to support? (rev07)
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     // CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,               //not in edgeTX
-    // CRSF_FRAMETYPE_RADIO_ID = 0x3A,                  //no need to support?
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
     // CRSF_FRAMETYPE_LINK_RX_ID = 0x1C,                 //no need to support?
     // CRSF_FRAMETYPE_LINK_TX_ID = 0x1D,                 //no need to support?
@@ -78,6 +80,7 @@ typedef enum
     // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
     CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,                  //ELRS good/bad packet count and status flags (extended header frame)
     // CRSF_FRAMETYPE_COMMAND = 0x32,                   //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_HANDSET = 0x3A,                      //handset subcommands e.g. timing sync (extended header frame; named RADIO_ID in older firmwares)
   // KISS frames
     // CRSF_FRAMETYPE_KISS_REQ  = 0x78,                 //not in edgeTX
     // CRSF_FRAMETYPE_KISS_RESP = 0x79,                 //not in edgeTX
@@ -240,6 +243,14 @@ typedef struct crsf_sensor_baro_altitude_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_altitude_t;
 
+
+// Decoded form of the HANDSET (0x3A) timing subcommand, sent by a TX module
+// to tell the handset the desired channels frame rate and phase
+typedef struct crsf_handset_timing_s
+{
+    uint32_t rate;  // requested channels packet interval, 0.1us units
+    int32_t offset; // timing offset correction, 0.1us units
+} crsf_handset_timing_t;
 
 // Decoded form of the ELRS_STATUS frame (extended header, TX module to
 // handset). On the wire the payload is pktsBad, pktsGood (big endian),

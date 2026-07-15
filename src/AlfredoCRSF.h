@@ -61,6 +61,8 @@ public:
     const crsf_sensor_temp_t *getTempSensor() const { return &_tempSensor; }
     const crsf_sensor_cells_t *getCellsSensor() const { return &_cellsSensor; }
     const crsf_elrs_status_t *getElrsStatus() const { return &_elrsStatus; }
+    // TX module's requested channels frame rate/phase (for handset emulation)
+    const crsf_handset_timing_t *getHandsetTiming() const { return &_handsetTiming; }
     bool isLinkUp() const { return _linkIsUp; }
 
     // ELRS 4.0+ (EdgeTX 2.11+) appends an optional status byte to channels
@@ -90,6 +92,7 @@ private:
     crsf_sensor_temp_t _tempSensor;
     crsf_sensor_cells_t _cellsSensor;
     crsf_elrs_status_t _elrsStatus;
+    crsf_handset_timing_t _handsetTiming;
     uint32_t _baud;
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
@@ -120,6 +123,7 @@ private:
     void packetTemp(const crsf_header_t *p);
     void packetCells(const crsf_header_t *p);
     void packetElrsStatus(const crsf_header_t *p);
+    void packetHandsetTiming(const crsf_header_t *p);
 
     void sendDeviceInfo(uint8_t destAddr);
 };

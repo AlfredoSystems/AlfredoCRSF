@@ -163,6 +163,9 @@ void AlfredoCRSF::processExtendedPacketIn(const crsf_header_t *hdr)
     case CRSF_FRAMETYPE_ELRS_STATUS:
         packetElrsStatus(hdr);
         break;
+    case CRSF_FRAMETYPE_HANDSET:
+        packetHandsetTiming(hdr);
+        break;
     case CRSF_FRAMETYPE_DEVICE_PING:
     {
         const crsf_ext_header_t *ext = (const crsf_ext_header_t *)hdr;
@@ -358,6 +361,22 @@ void AlfredoCRSF::packetElrsStatus(const crsf_header_t *p)
         msgLen = CRSF_ELRS_STATUS_MSG_LEN;
     memcpy(_elrsStatus.msg, &payload[4], msgLen);
     _elrsStatus.msg[msgLen] = '\0';
+}
+
+// HANDSET is an extended header frame; the payload is a subcommand byte
+// followed by subcommand-specific data
+void AlfredoCRSF::packetHandsetTiming(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+    if (payloadLen < 9)
+        return;
+    const uint8_t *payload = &p->data[2]; // skip extended dest/origin
+    if (payload[0] != CRSF_HANDSET_SUBCMD_TIMING)
+        return;
+    _handsetTiming.rate = ((uint32_t)payload[1] << 24) | ((uint32_t)payload[2] << 16) |
+                          ((uint32_t)payload[3] << 8) | payload[4];
+    _handsetTiming.offset = (int32_t)(((uint32_t)payload[5] << 24) | ((uint32_t)payload[6] << 16) |
+                                      ((uint32_t)payload[7] << 8) | payload[8]);
 }
 
 void AlfredoCRSF::packetCells(const crsf_header_t *p)

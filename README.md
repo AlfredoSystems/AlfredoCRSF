@@ -45,7 +45,7 @@ Overall packet length is PayloadLength+4 (dest, len, type, crc), or LEN+2 (dest,
 * CRSF_FRAMETYPE_CELLS = 0x0E,
 * CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
 * CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
-* CRSF_FRAMETYPE_RADIO_ID = 0x3A,
+* CRSF_FRAMETYPE_HANDSET = 0x3A, // named RADIO_ID in older firmwares
 * CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
 * CRSF_FRAMETYPE_LINK_RX_ID = 0x1C,
 * CRSF_FRAMETYPE_LINK_TX_ID = 0x1D,
@@ -134,11 +134,11 @@ Variable length, count of values determined by frame length. ELRS 4.0+ receivers
 * int8_t downlink_SNR;
 ### CRSF_FRAMETYPE_OPENTX_SYNC = 0x10
 * ????
-### CRSF_FRAMETYPE_RADIO_ID = 0x3A
-* uint16_t radioAddress;         //should be 0xEA00?
-* uint8_t timingCorrectionFrame; //should be 0x10?
-* uint32_t update_interval;      //what is this?
-* int32_t offset;                //what is this?
+### CRSF_FRAMETYPE_HANDSET = 0x3A (named RADIO_ID in older firmwares)
+Extended header frame (payload preceded by destination and origin address bytes). Sent by a TX module to the handset. The first payload byte is a subcommand; subcommand 0x10 is timing sync:
+* uint8_t subCommand;    // 0x10 = timing sync
+* uint32_t rate;         // requested channels packet interval in 0.1us units, BigEndian
+* int32_t offset;        // timing offset correction in 0.1us units, BigEndian
 ### CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16
 * unsigned ch0 : 11;
 * unsigned ch1 : 11;
