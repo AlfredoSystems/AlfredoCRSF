@@ -1,6 +1,7 @@
 #include <AlfredoCRSF.h>
 
 AlfredoCRSF::AlfredoCRSF() :
+    _deviceAddr(CRSF_ADDRESS_FLIGHT_CONTROLLER),
     _crc(0xd5),
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
     _hasChannelsStatus(false), _channelsStatus(0)
@@ -8,9 +9,10 @@ AlfredoCRSF::AlfredoCRSF() :
 
 }
 
-void AlfredoCRSF::begin(Stream &port)
+void AlfredoCRSF::begin(Stream &port, uint8_t deviceAddr)
 {
   this->_port = &port;
+  this->_deviceAddr = deviceAddr;
 }
 
 // Call from main loop to update
@@ -62,7 +64,7 @@ void AlfredoCRSF::handleByteReceived()
                 uint8_t crc = _crc.calc(&_rxBuf[2], len - 1);
                 if (crc == inCrc)
                 {
-                    processPacketIn(len);
+                    processPacketIn();
                     shiftRxBuffer(len + 2);
                     reprocess = true;
                 }
@@ -92,70 +94,76 @@ void AlfredoCRSF::checkLinkDown()
     }
 }
 
-void AlfredoCRSF::processPacketIn(uint8_t len)
+// Byte 0 of a CRSF frame is a sync byte, not routing information: standard
+// frames (type below 0x28) have meaning purely by their type, and extended
+// frames (0x28-0x96) carry their routing in destination/origin header bytes
+void AlfredoCRSF::processPacketIn()
 {
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
-    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) //Rx to FC
+    if (CRSF_IS_EXT_FRAMETYPE(hdr->type))
     {
-        if (!processTelemetryPacketIn(hdr) && hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-        {
-            packetChannelsPacked(hdr);
-        }
+        processExtendedPacketIn(hdr);
     }
-    else if (hdr->device_addr == CRSF_ADDRESS_CRSF_TRANSMITTER) //Headset to TX
+    else if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
-        if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-        {
-            packetChannelsPacked(hdr);
-        }
+        packetChannelsPacked(hdr);
     }
-    else if (hdr->device_addr == CRSF_ADDRESS_RADIO_TRANSMITTER) //Telemetry to TX (Backpack)
+    else
     {
         processTelemetryPacketIn(hdr);
     }
 }
 
-// Handle telemetry frame types common to the FC and backpack directions.
-// Returns true if the frame type was recognized and handled.
-bool AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
+void AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
 {
     switch (hdr->type)
     {
     case CRSF_FRAMETYPE_GPS:
         packetGps(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_GPS_TIME:
         packetGpsTime(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_LINK_STATISTICS:
         packetLinkStatistics(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_BARO_ALTITUDE:
         packetBaroAltitude(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_VARIO:
         packetVario(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_ATTITUDE:
         packetAttitude(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_AIRSPEED:
         packetAirspeed(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_RPM:
         packetRpm(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_TEMP:
         packetTemp(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_CELLS:
         packetCells(hdr);
-        return true;
+        break;
+    }
+}
+
+// Extended header frames. Status-carrying frames are decoded regardless of
+// their destination; frames that require a response are only acted on when
+// addressed to this device (or broadcast)
+void AlfredoCRSF::processExtendedPacketIn(const crsf_header_t *hdr)
+{
+    if (hdr->frame_size < CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
+        return;
+    switch (hdr->type)
+    {
     case CRSF_FRAMETYPE_ELRS_STATUS:
         packetElrsStatus(hdr);
-        return true;
+        break;
     }
-    return false;
 }
 
 // Shift the bytes in the RxBuf down by cnt bytes

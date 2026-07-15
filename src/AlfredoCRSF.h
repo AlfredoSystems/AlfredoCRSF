@@ -14,7 +14,10 @@ public:
     static const unsigned int CRSF_FAILSAFE_STAGE1_MS = 300;
 
     AlfredoCRSF();
-    void begin(Stream& port);
+    // deviceAddr is this device's own CRSF address, used for extended header
+    // frames that are addressed to a specific device (e.g. device discovery
+    // pings). Pass CRSF_ADDRESS_RADIO_TRANSMITTER when acting as a handset.
+    void begin(Stream& port, uint8_t deviceAddr = CRSF_ADDRESS_FLIGHT_CONTROLLER);
     void update();
     void write(uint8_t b);
     void write(const uint8_t *buf, size_t len);
@@ -57,6 +60,7 @@ public:
 
 private:
     Stream* _port;
+    uint8_t _deviceAddr;
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
     uint8_t _rxBufPos;
     Crc8 _crc;
@@ -83,12 +87,13 @@ private:
     void handleSerialIn();
     void handleByteReceived();
     void shiftRxBuffer(uint8_t cnt);
-    void processPacketIn(uint8_t len);
+    void processPacketIn();
     void checkPacketTimeout();
     void checkLinkDown();
 
     // Packet RX Handlers
-    bool processTelemetryPacketIn(const crsf_header_t *p);
+    void processTelemetryPacketIn(const crsf_header_t *p);
+    void processExtendedPacketIn(const crsf_header_t *p);
     void packetChannelsPacked(const crsf_header_t *p);
     void packetLinkStatistics(const crsf_header_t *p);
     void packetGps(const crsf_header_t *p);

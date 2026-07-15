@@ -108,11 +108,27 @@ typedef enum
 
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t device_addr; // sync byte; 0xC8 on serial links (0xEE/0xEA on handset links). Not routing information
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     uint8_t type;        // from crsf_frame_type_e
     uint8_t data[0];
 } PACKED crsf_header_t;
+
+// Extended header frames (type in the range 0x28 to 0x96) carry routing
+// information: a destination and origin address before the payload
+typedef struct crsf_ext_header_s
+{
+    uint8_t device_addr; // sync byte
+    uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 4 (type, dest, orig and crc)
+    uint8_t type;        // from crsf_frame_type_e
+    uint8_t dest_addr;   // from crsf_addr_e
+    uint8_t orig_addr;   // from crsf_addr_e
+    uint8_t payload[0];
+} PACKED crsf_ext_header_t;
+
+#define CRSF_FRAMETYPE_EXT_FIRST 0x28
+#define CRSF_FRAMETYPE_EXT_LAST  0x96
+#define CRSF_IS_EXT_FRAMETYPE(t) ((t) >= CRSF_FRAMETYPE_EXT_FIRST && (t) <= CRSF_FRAMETYPE_EXT_LAST)
 
 typedef struct crsf_channels_s
 {
