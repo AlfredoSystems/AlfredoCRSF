@@ -279,10 +279,13 @@ typedef struct crsf_sensor_attitude_s
 #define be16toh(x) (x)
 #define be32toh(x) (x)
 #define htobe16(x) (x)
+#define htobe24(x) (x)
 #define htobe32(x) (x)
 #else // __ORDER_LITTLE_ENDIAN__
 #define be16toh(x) __builtin_bswap16(x)
 #define be32toh(x) __builtin_bswap32(x)
 #define htobe16(x) __builtin_bswap16(x)
+// For the 24 bit fields used by some sensors, e.g. battery capacity
+#define htobe24(x) (__builtin_bswap32((uint32_t)(x)) >> 8)
 #define htobe32(x) __builtin_bswap32(x)
 #endif // __BYTE_ORDER__
