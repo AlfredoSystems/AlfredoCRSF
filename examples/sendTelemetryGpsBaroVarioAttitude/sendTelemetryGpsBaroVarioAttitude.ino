@@ -38,7 +38,7 @@ void sendGps(float latitude, float longitude, float groundspeed, float heading, 
   crsfGps.latitude = htobe32((int32_t)(latitude*10000000.0));
   crsfGps.longitude = htobe32((int32_t)(longitude*10000000.0));
   crsfGps.groundspeed = htobe16((uint16_t)(groundspeed*10.0));
-  crsfGps.heading = htobe16((int16_t)(heading*1000.0)); //TODO: heading seems to not display in EdgeTX correctly, some kind of overflow error
+  crsfGps.heading = htobe16((uint16_t)(heading*100.0)); //degrees * 100, so 0-360 degrees fits in 0-36000
   crsfGps.altitude = htobe16((uint16_t)(altitude + 1000.0));
   crsfGps.satellites = (uint8_t)(satellites);
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_GPS, &crsfGps, sizeof(crsfGps));

@@ -8,7 +8,6 @@ TODO:
 * For now callbacks have been removed. May add them back or replace with a flag system to alert when packets come in.
 * Improve battery telemetry example by using all 24 capacity bits. (currently just 16 bits are used)
 * Lib supports BaroAltitude packets but EdgeTX seems to not be able to parse them if Altitude is included.
-* GPS heading seems to have some overflow issues in EdgeTX.
 
 # Hardware requirements
 

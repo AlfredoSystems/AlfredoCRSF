@@ -11,8 +11,8 @@
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
 
-#define PIN_RX 7
-#define PIN_TX 8
+#define PIN_RX 4
+#define PIN_TX 5
 
 HardwareSerial crsfSerial(1);
 AlfredoCRSF crsf;
