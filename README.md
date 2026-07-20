@@ -2,11 +2,9 @@
 
 This library is based on CapnBry's CRSF code, it has been modified to match the format of standard Arduino Library. Keywords and example files included. It has also now been extended to support more telemetry packet types. Check out the example files to learn more.
 
-This library was designed for ELRS but should be compatible with any CRSF receiver.
+This library was designed for ELRS but should be compatible with any CRSF receiver. It supports both ELRS 3.x and 4.x: newer frame types are decoded when they arrive and simply never appear on an older link.
 
-TODO:
-* For now callbacks have been removed. May add them back or replace with a flag system to alert when packets come in.
-* Lib supports BaroAltitude packets but EdgeTX seems to not be able to parse them if Altitude is included.
+There are no packet callbacks. Call `update()` in your loop and read the latest values with the getters whenever you need them.
 
 # Hardware requirements
 
