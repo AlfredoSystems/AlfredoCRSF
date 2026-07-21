@@ -38,6 +38,13 @@ public:
     // address to destAddr. payload/len exclude the dest/origin bytes.
     void writeExtPacket(uint8_t type, uint8_t destAddr, const void *payload, uint8_t len);
 
+    // Tell a TX module which model ID is selected, the way a handset does when
+    // it connects. Only the low 6 bits are significant. Pass 0xFF, the value a
+    // handset uses for "no model match", unless you actually run model match:
+    // a mismatched ID leaves the receiver connected but completely silent on
+    // its serial port.
+    void sendModelId(uint8_t modelId);
+
     // Announce this device to the CRSF router for device discovery.
     // Call periodically (e.g. once per second); optional.
     void sendHeartbeat();

@@ -4,9 +4,6 @@
 // with a 4.0 TX/RX pair this sketch should show up in the ExpressLRS Lua
 // under Other Devices, and a VBAT-sensing receiver should produce a CELLS
 // frame (source id 128) with millivolt precision.
-//
-// Also works against a 3.x receiver: the new sensors simply stay at zero and
-// the discovery traffic is ignored.
 
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>

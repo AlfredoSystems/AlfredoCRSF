@@ -459,6 +459,26 @@ void AlfredoCRSF::writeExtPacket(uint8_t type, uint8_t destAddr, const void *pay
     writePacket(CRSF_SYNC_BYTE, type, buf, len + 2);
 }
 
+// Model select is a COMMAND frame, which is an extended header frame with an
+// extra payload CRC before the frame CRC:
+// [sync][len][type][dest][origin][command][subcommand][model id][crcBA][crc]
+void AlfredoCRSF::sendModelId(uint8_t modelId)
+{
+    uint8_t buf[10];
+    buf[0] = CRSF_SYNC_BYTE;
+    buf[1] = 8; // type, dest, origin, command, subcommand, model id, both CRCs
+    buf[2] = CRSF_FRAMETYPE_COMMAND;
+    buf[3] = CRSF_ADDRESS_CRSF_TRANSMITTER; // to the transmitter module
+    buf[4] = _deviceAddr;                   // from us, acting as the handset
+    buf[5] = CRSF_COMMAND_SUBCMD_RX;
+    buf[6] = CRSF_COMMAND_MODEL_SELECT_ID;
+    buf[7] = modelId;
+    // Command frames carry an extra CRC over the payload before the frame CRC
+    buf[8] = Crc8::calcPoly(&buf[2], 6, CRSF_COMMAND_CRC_POLY);
+    buf[9] = _crc.calc(&buf[2], 7);
+    write(buf, sizeof(buf));
+}
+
 void AlfredoCRSF::sendHeartbeat()
 {
     // Payload is the origin device address as a big endian int16

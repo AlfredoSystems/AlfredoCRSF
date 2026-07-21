@@ -19,6 +19,15 @@
 
 #define ARM_WITH_STATUS_BYTE 1
 
+// Model ID sent to the module at startup, the way a handset does.
+//
+// 0xFF means "no model match" and is the safe default: ELRS inverts the model
+// ID and masks it to 6 bits before mixing it into the link, so 0xFF cancels
+// out and any receiver accepts it. Use 0 to 63 only if you actually run model
+// match, and then it has to agree with what the receiver was bound to, or the
+// receiver stays connected while going completely silent on its serial port.
+#define MODEL_ID 0xFF
+
 HardwareSerial crsfSerial(1);
 AlfredoCRSF crsf;
 
@@ -37,6 +46,14 @@ void setup()
 
   // We are the handset, so extended frames addressed to the radio are for us
   crsf.begin(crsfSerial, CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+  // Handsets announce the selected model when they connect. Give the module a
+  // moment to be ready, then tell it. If you power the module up after this
+  // sketch, reset the board so it hears the model ID.
+  delay(500);
+  crsf.sendModelId(MODEL_ID);
+  Serial.print("Sent model ID ");
+  Serial.println(MODEL_ID);
 }
 
 void loop()
@@ -73,6 +90,7 @@ void loop()
 
 void sendChannels()
 {
+  // Every channel needs a value inside the valid CRSF range of 172 to 1811.
   crsf_channels_t ch = { 0 };
   ch.ch0 = CRSF_CHANNEL_VALUE_MID;  // aileron center
   ch.ch1 = CRSF_CHANNEL_VALUE_MID;  // elevator center
@@ -82,6 +100,14 @@ void sendChannels()
   ch.ch5 = CRSF_CHANNEL_VALUE_1000;
   ch.ch6 = CRSF_CHANNEL_VALUE_1000;
   ch.ch7 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch8 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch9 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch10 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch11 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch12 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch13 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch14 = CRSF_CHANNEL_VALUE_1000;
+  ch.ch15 = CRSF_CHANNEL_VALUE_1000;
 
 #if ARM_WITH_STATUS_BYTE
   // ELRS 4.0 Arm using Switch: arm state travels in the status byte

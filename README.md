@@ -95,10 +95,17 @@ void loop()
 
 ## Compatibility notes
 
-- **Model match.** If a receiver binds and shows connected but sends nothing at
-  all over serial, check the model match setting on your handset. A mismatched
-  model ID makes the receiver suppress its entire serial output, which looks
-  exactly like a wiring fault.
+- **A receiver that binds but sends nothing** is the most common problem, and
+  it looks exactly like a wiring fault. Three things cause it:
+  - **Serial output not enabled.** On receivers with configurable IO, such as
+    the ER series, the pins have to be assigned a serial protocol in the ELRS
+    configurator before anything comes out of them.
+  - **Model match.** A mismatched model ID makes the receiver suppress its
+    entire serial output while still showing as connected. When driving a
+    transmitter module yourself, send the model ID with `sendModelId()` the way
+    a handset does, or turn model match off.
+  - **No radio link.** ELRS 3.x receivers stay silent until they connect to a
+    transmitter, so bench tests need the transmitter powered and bound.
 - **The arming status byte** on channel frames is ELRS 4.0 with EdgeTX 2.11 or
   newer. Sending it to a 3.x transmitter module produces a frame it does not
   understand.

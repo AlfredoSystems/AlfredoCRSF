@@ -32,6 +32,13 @@
 // Subcommand in the first payload byte of a HANDSET (0x3A) frame
 #define CRSF_HANDSET_SUBCMD_TIMING 0x10
 
+// COMMAND (0x32) frames: a command byte, then a subcommand, then its data.
+// They also carry an extra CRC over the payload using this polynomial,
+// placed before the normal frame CRC.
+#define CRSF_COMMAND_SUBCMD_RX       0x10 // commands aimed at the receiver
+#define CRSF_COMMAND_MODEL_SELECT_ID 0x05 // select model/receiver ID
+#define CRSF_COMMAND_CRC_POLY        0xBA
+
 // Flag bits in the ELRS_STATUS flags field
 #define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
 #define CRSF_ELRS_FLAG_MODEL_MATCH_WARN  0x04 // warning: model mismatch
@@ -79,7 +86,7 @@ typedef enum
     // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
     CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,                  //ELRS good/bad packet count and status flags (extended header frame)
-    // CRSF_FRAMETYPE_COMMAND = 0x32,                   //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_COMMAND = 0x32,                      //commands e.g. model select, bind (extended header frame with an extra payload CRC)
     CRSF_FRAMETYPE_HANDSET = 0x3A,                      //handset subcommands e.g. timing sync (extended header frame; named RADIO_ID in older firmwares)
   // KISS frames
     // CRSF_FRAMETYPE_KISS_REQ  = 0x78,                 //not in edgeTX
