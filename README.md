@@ -86,7 +86,8 @@ void loop()
 | `printAllChannels` | ✅ | ✅ | Print all 16 channels. Start here |
 | `linkStatusLed` | ✅ | ✅ | Drive an LED from link state |
 | `sendTelemetryBattery` | ✅ | ✅ | Measure a voltage divider and report battery telemetry |
-| `sendTelemetryGpsBaroVarioAttitude` | ✅ | ✅ | Send GPS, altitude, vario and attitude. The GPS time packet needs 4.1+ |
+| `sendTelemetryGpsBaroVarioAttitude` | ✅ | ✅ | Send GPS, altitude, vario, attitude and airspeed. The GPS time packet needs 4.1+ |
+| `sendTelemetryRpmTempCells` | ✅ | ✅ | Send the variable length sensors: RPM, temperature and cell voltages. Needs ELRS 3.5.5+ |
 | `forwardChannelsToFC` | ✅ | ✅ | Two receivers with failover, forwarding channels onward |
 | `forwardPacketsFromHandset` | ✅ | ✅ | Read packets on the handset side of the link |
 | `elrs4SelfTest` | ❌ | ✅ | Functional self test needing no radio at all: cross wire two UARTs and check every parser and sender |

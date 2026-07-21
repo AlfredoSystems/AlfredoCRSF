@@ -28,6 +28,7 @@ void loop()
   sendGpsTime(2026, 7, 14, 12, 34, 56, 789);
   sendBaroAltitude(234.1, 154.1);
   sendAttitude(0.05,-2.43,1.23);
+  sendAirspeed(87.5);
 }
 
 void sendGps(float latitude, float longitude, float groundspeed, float heading, float altitude, float satellites)
@@ -74,6 +75,17 @@ void sendBaroAltitude(float altitude, float verticalspd)
   crsfBaroAltitude.altitude = htobe16((uint16_t)(altitude*10.0 + 10000.0)); //decimeters + 10000dm
   crsfBaroAltitude.verticalspd = htobe16((int16_t)(verticalspd*100.0));     //cm/s
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_BARO_ALTITUDE, &crsfBaroAltitude, sizeof(crsfBaroAltitude));
+}
+
+// Airspeed, as measured by a pitot tube. This is the speed through the air,
+// which is not the same as the GPS ground speed sent above.
+void sendAirspeed(float speed)
+{
+  crsf_sensor_airspeed_t crsfAirspeed = { 0 };
+
+  // Values are MSB first (BigEndian)
+  crsfAirspeed.speed = htobe16((uint16_t)(speed*10.0)); //km/h * 10
+  crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_AIRSPEED, &crsfAirspeed, sizeof(crsfAirspeed));
 }
 
 // Vertical speed on its own, for when it does not come from a barometer
