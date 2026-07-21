@@ -90,7 +90,7 @@ void loop()
 | `elrs4ReceiverTest` | ❌ | ✅ | Bench test a receiver. On 3.x the newer telemetry sections stay silent, which is the compatibility check |
 | `handsetEmulator` | ✅ | ✅ | Drive a TX module the way a handset does. Set `ARM_WITH_STATUS_BYTE` to 0 for 3.x |
 
-## Compatibility notes
+## Troubleshooting
 
 - **A receiver that binds but sends nothing** is the most common problem, and
   it looks exactly like a wiring fault. Three things cause it:
