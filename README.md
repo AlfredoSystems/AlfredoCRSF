@@ -28,10 +28,6 @@ exist on 3.x never arrive, and their getters stay zeroed.
 | CRSF router participation: heartbeat and device discovery | ❌ | ✅ |
 | GPS time forwarded to the handset clock | ❌ | ✅ |
 
-
-There are no packet callbacks. Call `update()` in your loop and read the
-latest values from the getters whenever you need them.
-
 ## Hardware requirements
 
 Designed for the ESP32. CRSF runs at up to 420000 baud, so it needs a hardware
