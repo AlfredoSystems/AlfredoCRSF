@@ -14,12 +14,45 @@ public:
     static const unsigned int CRSF_FAILSAFE_STAGE1_MS = 300;
 
     AlfredoCRSF();
-    void begin(Stream& port);
+    // deviceAddr is this device's own CRSF address, used for extended header
+    // frames that are addressed to a specific device (e.g. device discovery
+    // pings). Pass CRSF_ADDRESS_RADIO_TRANSMITTER when acting as a handset.
+    void begin(Stream& port, uint8_t deviceAddr = CRSF_ADDRESS_FLIGHT_CONTROLLER);
     void update();
     void write(uint8_t b);
     void write(const uint8_t *buf, size_t len);
     void queuePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
     void writePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len);
+
+    // Send a packed channels frame. addr is the leading byte: use CRSF_SYNC_BYTE
+    // when sending to a flight controller, CRSF_ADDRESS_CRSF_TRANSMITTER when
+    // sending to a TX module as a handset would.
+    void writeChannels(uint8_t addr, const crsf_channels_t *channels);
+    // ELRS 4.0+ TX modules only: also appends the channels status byte
+    // (CRSF_CHANNELS_STATUS_* bits) carrying the commanded arm state for Arm
+    // using Switch mode. ELRS 3.x modules do not understand the longer frame,
+    // so only use this against a 4.0+ module with Switch arming selected.
+    void writeChannels(uint8_t addr, const crsf_channels_t *channels, uint8_t status);
+
+    // Send an extended header frame (type 0x28-0x96) from this device's
+    // address to destAddr. payload/len exclude the dest/origin bytes.
+    void writeExtPacket(uint8_t type, uint8_t destAddr, const void *payload, uint8_t len);
+
+    // Tell a TX module which model ID is selected, the way a handset does when
+    // it connects. Only the low 6 bits are significant. Pass 0xFF, the value a
+    // handset uses for "no model match", unless you actually run model match:
+    // a mismatched ID leaves the receiver connected but completely silent on
+    // its serial port.
+    void sendModelId(uint8_t modelId);
+
+    // Announce this device to the CRSF router for device discovery.
+    // Call periodically (e.g. once per second); optional.
+    void sendHeartbeat();
+
+    // Respond to CRSF device discovery pings with the given device name, so
+    // this device shows up to the router and configuration tools. The string
+    // is not copied and must remain valid. Pass NULL to disable (default).
+    void setDeviceName(const char *name);
 
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
@@ -35,6 +68,8 @@ public:
     const crsf_sensor_temp_t *getTempSensor() const { return &_tempSensor; }
     const crsf_sensor_cells_t *getCellsSensor() const { return &_cellsSensor; }
     const crsf_elrs_status_t *getElrsStatus() const { return &_elrsStatus; }
+    // TX module's requested channels frame rate/phase (for handset emulation)
+    const crsf_handset_timing_t *getHandsetTiming() const { return &_handsetTiming; }
     bool isLinkUp() const { return _linkIsUp; }
 
     // ELRS 4.0+ (EdgeTX 2.11+) appends an optional status byte to channels
@@ -47,6 +82,8 @@ public:
 
 private:
     Stream* _port;
+    uint8_t _deviceAddr;
+    const char *_deviceName;
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
     uint8_t _rxBufPos;
     Crc8 _crc;
@@ -62,6 +99,7 @@ private:
     crsf_sensor_temp_t _tempSensor;
     crsf_sensor_cells_t _cellsSensor;
     crsf_elrs_status_t _elrsStatus;
+    crsf_handset_timing_t _handsetTiming;
     uint32_t _baud;
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
@@ -73,12 +111,13 @@ private:
     void handleSerialIn();
     void handleByteReceived();
     void shiftRxBuffer(uint8_t cnt);
-    void processPacketIn(uint8_t len);
+    void processPacketIn();
     void checkPacketTimeout();
     void checkLinkDown();
 
     // Packet RX Handlers
-    bool processTelemetryPacketIn(const crsf_header_t *p);
+    void processTelemetryPacketIn(const crsf_header_t *p);
+    void processExtendedPacketIn(const crsf_header_t *p);
     void packetChannelsPacked(const crsf_header_t *p);
     void packetLinkStatistics(const crsf_header_t *p);
     void packetGps(const crsf_header_t *p);
@@ -91,4 +130,7 @@ private:
     void packetTemp(const crsf_header_t *p);
     void packetCells(const crsf_header_t *p);
     void packetElrsStatus(const crsf_header_t *p);
+    void packetHandsetTiming(const crsf_header_t *p);
+
+    void sendDeviceInfo(uint8_t destAddr);
 };

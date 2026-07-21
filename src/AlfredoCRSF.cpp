@@ -1,6 +1,7 @@
 #include <AlfredoCRSF.h>
 
 AlfredoCRSF::AlfredoCRSF() :
+    _deviceAddr(CRSF_ADDRESS_FLIGHT_CONTROLLER), _deviceName(NULL),
     _crc(0xd5),
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
     _hasChannelsStatus(false), _channelsStatus(0)
@@ -8,9 +9,10 @@ AlfredoCRSF::AlfredoCRSF() :
 
 }
 
-void AlfredoCRSF::begin(Stream &port)
+void AlfredoCRSF::begin(Stream &port, uint8_t deviceAddr)
 {
   this->_port = &port;
+  this->_deviceAddr = deviceAddr;
 }
 
 // Call from main loop to update
@@ -62,7 +64,7 @@ void AlfredoCRSF::handleByteReceived()
                 uint8_t crc = _crc.calc(&_rxBuf[2], len - 1);
                 if (crc == inCrc)
                 {
-                    processPacketIn(len);
+                    processPacketIn();
                     shiftRxBuffer(len + 2);
                     reprocess = true;
                 }
@@ -92,70 +94,86 @@ void AlfredoCRSF::checkLinkDown()
     }
 }
 
-void AlfredoCRSF::processPacketIn(uint8_t len)
+// Byte 0 of a CRSF frame is a sync byte, not routing information: standard
+// frames (type below 0x28) have meaning purely by their type, and extended
+// frames (0x28-0x96) carry their routing in destination/origin header bytes
+void AlfredoCRSF::processPacketIn()
 {
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
-    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) //Rx to FC
+    if (CRSF_IS_EXT_FRAMETYPE(hdr->type))
     {
-        if (!processTelemetryPacketIn(hdr) && hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-        {
-            packetChannelsPacked(hdr);
-        }
+        processExtendedPacketIn(hdr);
     }
-    else if (hdr->device_addr == CRSF_ADDRESS_CRSF_TRANSMITTER) //Headset to TX
+    else if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
-        if (hdr->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-        {
-            packetChannelsPacked(hdr);
-        }
+        packetChannelsPacked(hdr);
     }
-    else if (hdr->device_addr == CRSF_ADDRESS_RADIO_TRANSMITTER) //Telemetry to TX (Backpack)
+    else
     {
         processTelemetryPacketIn(hdr);
     }
 }
 
-// Handle telemetry frame types common to the FC and backpack directions.
-// Returns true if the frame type was recognized and handled.
-bool AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
+void AlfredoCRSF::processTelemetryPacketIn(const crsf_header_t *hdr)
 {
     switch (hdr->type)
     {
     case CRSF_FRAMETYPE_GPS:
         packetGps(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_GPS_TIME:
         packetGpsTime(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_LINK_STATISTICS:
         packetLinkStatistics(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_BARO_ALTITUDE:
         packetBaroAltitude(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_VARIO:
         packetVario(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_ATTITUDE:
         packetAttitude(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_AIRSPEED:
         packetAirspeed(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_RPM:
         packetRpm(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_TEMP:
         packetTemp(hdr);
-        return true;
+        break;
     case CRSF_FRAMETYPE_CELLS:
         packetCells(hdr);
-        return true;
+        break;
+    }
+}
+
+// Extended header frames. Status-carrying frames are decoded regardless of
+// their destination; frames that require a response are only acted on when
+// addressed to this device (or broadcast)
+void AlfredoCRSF::processExtendedPacketIn(const crsf_header_t *hdr)
+{
+    if (hdr->frame_size < CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
+        return;
+    switch (hdr->type)
+    {
     case CRSF_FRAMETYPE_ELRS_STATUS:
         packetElrsStatus(hdr);
-        return true;
+        break;
+    case CRSF_FRAMETYPE_HANDSET:
+        packetHandsetTiming(hdr);
+        break;
+    case CRSF_FRAMETYPE_DEVICE_PING:
+    {
+        const crsf_ext_header_t *ext = (const crsf_ext_header_t *)hdr;
+        if (_deviceName && (ext->dest_addr == _deviceAddr || ext->dest_addr == CRSF_ADDRESS_BROADCAST))
+            sendDeviceInfo(ext->orig_addr);
+        break;
     }
-    return false;
+    }
 }
 
 // Shift the bytes in the RxBuf down by cnt bytes
@@ -345,6 +363,22 @@ void AlfredoCRSF::packetElrsStatus(const crsf_header_t *p)
     _elrsStatus.msg[msgLen] = '\0';
 }
 
+// HANDSET is an extended header frame; the payload is a subcommand byte
+// followed by subcommand-specific data
+void AlfredoCRSF::packetHandsetTiming(const crsf_header_t *p)
+{
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+    if (payloadLen < 9)
+        return;
+    const uint8_t *payload = &p->data[2]; // skip extended dest/origin
+    if (payload[0] != CRSF_HANDSET_SUBCMD_TIMING)
+        return;
+    _handsetTiming.rate = ((uint32_t)payload[1] << 24) | ((uint32_t)payload[2] << 16) |
+                          ((uint32_t)payload[3] << 8) | payload[4];
+    _handsetTiming.offset = (int32_t)(((uint32_t)payload[5] << 24) | ((uint32_t)payload[6] << 16) |
+                                      ((uint32_t)payload[7] << 8) | payload[8]);
+}
+
 void AlfredoCRSF::packetCells(const crsf_header_t *p)
 {
     uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_TYPE_CRC;
@@ -397,4 +431,79 @@ void AlfredoCRSF::writePacket(uint8_t addr, uint8_t type, const void *payload, u
     memcpy(&buf[3], payload, len);
     buf[len+3] = _crc.calc(&buf[2], len + 1);
     write(buf, len + 4);
+}
+
+void AlfredoCRSF::writeChannels(uint8_t addr, const crsf_channels_t *channels)
+{
+    writePacket(addr, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, channels, sizeof(crsf_channels_t));
+}
+
+void AlfredoCRSF::writeChannels(uint8_t addr, const crsf_channels_t *channels, uint8_t status)
+{
+    // ELRS 4.0 extended channels frame: the packed channels followed by one
+    // status byte (CRSF_CHANNELS_STATUS_* bits)
+    uint8_t payload[sizeof(crsf_channels_t) + 1];
+    memcpy(payload, channels, sizeof(crsf_channels_t));
+    payload[sizeof(crsf_channels_t)] = status;
+    writePacket(addr, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, payload, sizeof(payload));
+}
+
+void AlfredoCRSF::writeExtPacket(uint8_t type, uint8_t destAddr, const void *payload, uint8_t len)
+{
+    if (len > CRSF_MAX_PACKET_LEN - 2)
+        return;
+    uint8_t buf[CRSF_MAX_PACKET_LEN];
+    buf[0] = destAddr;
+    buf[1] = _deviceAddr;
+    memcpy(&buf[2], payload, len);
+    writePacket(CRSF_SYNC_BYTE, type, buf, len + 2);
+}
+
+// Model select is a COMMAND frame, which is an extended header frame with an
+// extra payload CRC before the frame CRC:
+// [sync][len][type][dest][origin][command][subcommand][model id][crcBA][crc]
+void AlfredoCRSF::sendModelId(uint8_t modelId)
+{
+    uint8_t buf[10];
+    buf[0] = CRSF_SYNC_BYTE;
+    buf[1] = 8; // type, dest, origin, command, subcommand, model id, both CRCs
+    buf[2] = CRSF_FRAMETYPE_COMMAND;
+    buf[3] = CRSF_ADDRESS_CRSF_TRANSMITTER; // to the transmitter module
+    buf[4] = _deviceAddr;                   // from us, acting as the handset
+    buf[5] = CRSF_COMMAND_SUBCMD_RX;
+    buf[6] = CRSF_COMMAND_MODEL_SELECT_ID;
+    buf[7] = modelId;
+    // Command frames carry an extra CRC over the payload before the frame CRC
+    buf[8] = Crc8::calcPoly(&buf[2], 6, CRSF_COMMAND_CRC_POLY);
+    buf[9] = _crc.calc(&buf[2], 7);
+    write(buf, sizeof(buf));
+}
+
+void AlfredoCRSF::sendHeartbeat()
+{
+    // Payload is the origin device address as a big endian int16
+    uint8_t payload[2] = { 0, _deviceAddr };
+    writePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_HEARTBEAT, payload, sizeof(payload));
+}
+
+void AlfredoCRSF::setDeviceName(const char *name)
+{
+    _deviceName = name;
+}
+
+// DEVICE_INFO payload: null-terminated device name, then serial number,
+// hardware and software version (uint32 big endian), field count and
+// parameter version. We report no configuration fields.
+void AlfredoCRSF::sendDeviceInfo(uint8_t destAddr)
+{
+    uint8_t payload[CRSF_DEVICE_NAME_MAX + 1 + 14];
+    uint8_t nameLen = 0;
+    while (_deviceName[nameLen] && nameLen < CRSF_DEVICE_NAME_MAX)
+    {
+        payload[nameLen] = _deviceName[nameLen];
+        nameLen++;
+    }
+    payload[nameLen++] = '\0';
+    memset(&payload[nameLen], 0, 14);
+    writeExtPacket(CRSF_FRAMETYPE_DEVICE_INFO, destAddr, payload, nameLen + 14);
 }

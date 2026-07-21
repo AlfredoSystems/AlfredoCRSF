@@ -27,6 +27,17 @@
 #define CRSF_MAX_TEMP_VALUES 20
 #define CRSF_MAX_CELL_VALUES 29
 #define CRSF_ELRS_STATUS_MSG_LEN 56
+#define CRSF_DEVICE_NAME_MAX 32
+
+// Subcommand in the first payload byte of a HANDSET (0x3A) frame
+#define CRSF_HANDSET_SUBCMD_TIMING 0x10
+
+// COMMAND (0x32) frames: a command byte, then a subcommand, then its data.
+// They also carry an extra CRC over the payload using this polynomial,
+// placed before the normal frame CRC.
+#define CRSF_COMMAND_SUBCMD_RX       0x10 // commands aimed at the receiver
+#define CRSF_COMMAND_MODEL_SELECT_ID 0x05 // select model/receiver ID
+#define CRSF_COMMAND_CRC_POLY        0xBA
 
 // Flag bits in the ELRS_STATUS flags field
 #define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
@@ -63,20 +74,20 @@ typedef enum
     //CRSF_FRAMETYPE_VIDEO_TRANSMITTER = 0x0F,           //no need to support? (rev07)
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     // CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,               //not in edgeTX
-    // CRSF_FRAMETYPE_RADIO_ID = 0x3A,                  //no need to support?
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
     // CRSF_FRAMETYPE_LINK_RX_ID = 0x1C,                 //no need to support?
     // CRSF_FRAMETYPE_LINK_TX_ID = 0x1D,                 //no need to support?
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
     // CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,               //no need to support?
   // Extended Header Frames, range: 0x28 to 0x96
-    // CRSF_FRAMETYPE_DEVICE_PING = 0x28,               //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_DEVICE_INFO = 0x29,               //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_DEVICE_PING = 0x28,                  //device discovery request (extended header frame)
+    CRSF_FRAMETYPE_DEVICE_INFO = 0x29,                  //device discovery response (extended header frame)
     // CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,  //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
     // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
     CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,                  //ELRS good/bad packet count and status flags (extended header frame)
-    // CRSF_FRAMETYPE_COMMAND = 0x32,                   //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_COMMAND = 0x32,                      //commands e.g. model select, bind (extended header frame with an extra payload CRC)
+    CRSF_FRAMETYPE_HANDSET = 0x3A,                      //handset subcommands e.g. timing sync (extended header frame; named RADIO_ID in older firmwares)
   // KISS frames
     // CRSF_FRAMETYPE_KISS_REQ  = 0x78,                 //not in edgeTX
     // CRSF_FRAMETYPE_KISS_RESP = 0x79,                 //not in edgeTX
@@ -108,11 +119,27 @@ typedef enum
 
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t device_addr; // sync byte; 0xC8 on serial links (0xEE/0xEA on handset links). Not routing information
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     uint8_t type;        // from crsf_frame_type_e
     uint8_t data[0];
 } PACKED crsf_header_t;
+
+// Extended header frames (type in the range 0x28 to 0x96) carry routing
+// information: a destination and origin address before the payload
+typedef struct crsf_ext_header_s
+{
+    uint8_t device_addr; // sync byte
+    uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 4 (type, dest, orig and crc)
+    uint8_t type;        // from crsf_frame_type_e
+    uint8_t dest_addr;   // from crsf_addr_e
+    uint8_t orig_addr;   // from crsf_addr_e
+    uint8_t payload[0];
+} PACKED crsf_ext_header_t;
+
+#define CRSF_FRAMETYPE_EXT_FIRST 0x28
+#define CRSF_FRAMETYPE_EXT_LAST  0x96
+#define CRSF_IS_EXT_FRAMETYPE(t) ((t) >= CRSF_FRAMETYPE_EXT_FIRST && (t) <= CRSF_FRAMETYPE_EXT_LAST)
 
 typedef struct crsf_channels_s
 {
@@ -224,6 +251,14 @@ typedef struct crsf_sensor_baro_altitude_s
 } PACKED crsf_sensor_baro_altitude_t;
 
 
+// Decoded form of the HANDSET (0x3A) timing subcommand, sent by a TX module
+// to tell the handset the desired channels frame rate and phase
+typedef struct crsf_handset_timing_s
+{
+    uint32_t rate;  // requested channels packet interval, 0.1us units
+    int32_t offset; // timing offset correction, 0.1us units
+} crsf_handset_timing_t;
+
 // Decoded form of the ELRS_STATUS frame (extended header, TX module to
 // handset). On the wire the payload is pktsBad, pktsGood (big endian),
 // flags, then a variable-length null-terminated message string.
@@ -251,10 +286,13 @@ typedef struct crsf_sensor_attitude_s
 #define be16toh(x) (x)
 #define be32toh(x) (x)
 #define htobe16(x) (x)
+#define htobe24(x) (x)
 #define htobe32(x) (x)
 #else // __ORDER_LITTLE_ENDIAN__
 #define be16toh(x) __builtin_bswap16(x)
 #define be32toh(x) __builtin_bswap32(x)
 #define htobe16(x) __builtin_bswap16(x)
+// For the 24 bit fields used by some sensors, e.g. battery capacity
+#define htobe24(x) (__builtin_bswap32((uint32_t)(x)) >> 8)
 #define htobe32(x) __builtin_bswap32(x)
 #endif // __BYTE_ORDER__

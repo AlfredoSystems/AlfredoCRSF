@@ -38,7 +38,7 @@ void sendGps(float latitude, float longitude, float groundspeed, float heading, 
   crsfGps.latitude = htobe32((int32_t)(latitude*10000000.0));
   crsfGps.longitude = htobe32((int32_t)(longitude*10000000.0));
   crsfGps.groundspeed = htobe16((uint16_t)(groundspeed*10.0));
-  crsfGps.heading = htobe16((int16_t)(heading*1000.0)); //TODO: heading seems to not display in EdgeTX correctly, some kind of overflow error
+  crsfGps.heading = htobe16((uint16_t)(heading*100.0)); //degrees * 100, so 0-360 degrees fits in 0-36000
   crsfGps.altitude = htobe16((uint16_t)(altitude + 1000.0));
   crsfGps.satellites = (uint8_t)(satellites);
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_GPS, &crsfGps, sizeof(crsfGps));
@@ -61,21 +61,28 @@ void sendGpsTime(int16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_GPS_TIME, &crsfGpsTime, sizeof(crsfGpsTime));
 }
 
+// Sends altitude and vertical speed together in one BaroAltitude packet.
+// EdgeTX decides what the packet contains from its length: a 2 byte payload
+// is altitude only, and a 4 byte payload adds ELRS style vertical speed.
+// Very old EdgeTX versions only understand the altitude, in which case send
+// vertical speed separately with sendVario() below.
 void sendBaroAltitude(float altitude, float verticalspd)
 {
   crsf_sensor_baro_altitude_t crsfBaroAltitude = { 0 };
 
   // Values are MSB first (BigEndian)
-  crsfBaroAltitude.altitude = htobe16((uint16_t)(altitude*10.0 + 10000.0));
-  //crsfBaroAltitude.verticalspd = htobe16((int16_t)(verticalspd*100.0)); //TODO: fix verticalspd in BaroAlt packets
-  crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_BARO_ALTITUDE, &crsfBaroAltitude, sizeof(crsfBaroAltitude) - 2);
-  
-  //Supposedly vertical speed can be sent in a BaroAltitude packet, but I cant get this to work.
-  //For now I have to send a second vario packet to get vertical speed telemetry to my TX.
+  crsfBaroAltitude.altitude = htobe16((uint16_t)(altitude*10.0 + 10000.0)); //decimeters + 10000dm
+  crsfBaroAltitude.verticalspd = htobe16((int16_t)(verticalspd*100.0));     //cm/s
+  crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_BARO_ALTITUDE, &crsfBaroAltitude, sizeof(crsfBaroAltitude));
+}
+
+// Vertical speed on its own, for when it does not come from a barometer
+void sendVario(float verticalspd)
+{
   crsf_sensor_vario_t crsfVario = { 0 };
 
   // Values are MSB first (BigEndian)
-  crsfVario.verticalspd = htobe16((int16_t)(verticalspd*100.0));
+  crsfVario.verticalspd = htobe16((int16_t)(verticalspd*100.0)); //cm/s
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_VARIO, &crsfVario, sizeof(crsfVario));
 }
 

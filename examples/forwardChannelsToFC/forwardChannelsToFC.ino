@@ -72,8 +72,7 @@ int getLinkQuality(AlfredoCRSF& crsf) {
 
 // Method to send channels based on CRSF instance
 void sendChannels(AlfredoCRSF& crsf) {
-  const crsf_channels_t* channels_ptr = crsf.getChannelsPacked();
-  crsfOut.writePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, channels_ptr, sizeof(*channels_ptr));
+  crsfOut.writeChannels(CRSF_SYNC_BYTE, crsf.getChannelsPacked());
 }
 
 // Fallback method to send default channel values
@@ -96,5 +95,5 @@ void sendFallbackChannels() {
   crsfChannels.ch14 = CRSF_CHANNEL_VALUE_1000;
   crsfChannels.ch15 = CRSF_CHANNEL_VALUE_1000;
 
-  crsfOut.writePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, &crsfChannels, sizeof(crsfChannels));
+  crsfOut.writeChannels(CRSF_SYNC_BYTE, &crsfChannels);
 }
