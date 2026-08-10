@@ -89,6 +89,7 @@ void loop()
 | `elrs4SelfTest` | ❌ | ✅ | Functional self test needing no radio at all: cross wire two UARTs and check every parser and sender |
 | `elrs4ReceiverTest` | ❌ | ✅ | Bench test a receiver. On 3.x the newer telemetry sections stay silent, which is the compatibility check |
 | `handsetEmulator` | ✅ | ✅ | Drive a TX module the way a handset does. Set `ARM_WITH_STATUS_BYTE` to 0 for 3.x |
+| `elrsPassthrough` | ✅ | ✅ | Update the receiver's firmware through this board, using the ExpressLRS Configurator's Betaflight Passthrough method |
 
 ## Troubleshooting
 

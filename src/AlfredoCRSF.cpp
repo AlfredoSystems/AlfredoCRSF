@@ -479,6 +479,14 @@ void AlfredoCRSF::sendModelId(uint8_t modelId)
     write(buf, sizeof(buf));
 }
 
+// The receiver looks for its own address as the leading byte rather than the
+// usual sync byte, and for the literal payload "bl". This is the same frame
+// the ExpressLRS flashing tools send: EC 04 32 62 6C 0A
+void AlfredoCRSF::sendBootloaderCommand()
+{
+    writePacket(CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_COMMAND, "bl", 2);
+}
+
 void AlfredoCRSF::sendHeartbeat()
 {
     // Payload is the origin device address as a big endian int16

@@ -45,6 +45,13 @@ public:
     // its serial port.
     void sendModelId(uint8_t modelId);
 
+    // Ask an ELRS receiver to enter its firmware update mode, so it can be
+    // reflashed over this serial port. Works with no radio link. The receiver
+    // replies with its target name, then speaks the esptool protocol at the
+    // same baud rate. ESP32 receivers stay in that mode with their radio off
+    // until power cycled, so only send this when you mean to reflash.
+    void sendBootloaderCommand();
+
     // Announce this device to the CRSF router for device discovery.
     // Call periodically (e.g. once per second); optional.
     void sendHeartbeat();
