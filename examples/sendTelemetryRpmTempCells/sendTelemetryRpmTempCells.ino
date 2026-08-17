@@ -1,14 +1,20 @@
 /*
-Sends the variable length telemetry sensors: RPM, temperature and cell
-voltages. Requires ELRS 3.5.5 or newer at both ends; older firmware does not
-know these frame types and ignores them.
+Sends the variable length telemetry sensors: RPM, temperature, cell voltages
+and standalone voltages. Requires ELRS 3.5.5 or newer at both ends; older
+firmware does not know these frame types and ignores them.
 
-Unlike GPS or battery telemetry, these three carry a variable number of values
-and the receiver works out how many from the frame length. Their structs in
+Unlike GPS or battery telemetry, these carry a variable number of values and
+the receiver works out how many from the frame length. Their structs in
 crsf_protocol.h are decode helpers rather than wire layouts, so the payload has
 to be packed into a byte buffer by hand. Each one starts with a source ID that
 identifies which motor, sensor or battery the values belong to, and RPM uses
 24 bit values that no htobe helper covers.
+
+Cells and standalone voltages share one frame type (CELLS). The source ID
+decides how the radio reads it: below 128 the values are the cells of one
+battery, 128 and above they are separate voltage sensors. An ELRS 4.0 receiver
+reports its own measured voltage that second way, with millivolt precision,
+which is what sendVoltage() below does.
 */
 
 #include <AlfredoCRSF.h>
@@ -45,9 +51,15 @@ void loop()
   int16_t temperatures[2] = { 415, 226 }; // 41.5C and 22.6C
   sendTemperature(0, temperatures, 2);
 
-  // A 4S pack, in millivolts
+  // A 4S pack, in millivolts, shown as one battery of four cells
   uint16_t cells[4] = { 4150, 4148, 4152, 4149 };
   sendCells(0, cells, 4);
+
+  // A standalone voltage with millivolt precision, shown as its own "Volt"
+  // sensor. This is the ELRS 4.0 receiver VBatt style reading. Send more with
+  // different indexes, e.g. a receiver battery and an ignition battery.
+  sendVoltage(0, 16580); // 16.58V main battery
+  sendVoltage(1, 8240);  // 8.24V ignition battery
 
   delay(100);
 }
@@ -95,8 +107,8 @@ void sendTemperature(uint8_t sourceId, const int16_t *values, uint8_t count)
 }
 
 // Cell voltages in millivolts, so 3850 is 3.850V. sourceId 0 is the first
-// battery. ELRS 4.0 receivers use source ID 128 to report their own measured
-// pack voltage this way, which is why it has millivolt precision.
+// battery, 1 the second, and so on. Keep sourceId below 128 here; 128 and above
+// are read as standalone voltages instead, which sendVoltage() below uses.
 void sendCells(uint8_t sourceId, const uint16_t *millivolts, uint8_t count)
 {
   if (count > CRSF_MAX_CELL_VALUES)
@@ -113,4 +125,19 @@ void sendCells(uint8_t sourceId, const uint16_t *millivolts, uint8_t count)
   }
 
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_CELLS, payload, 1 + count*2);
+}
+
+// A single voltage in millivolts, shown on the radio as its own "Volt" sensor
+// rather than as a cell of a pack. This is how an ELRS 4.0 receiver reports its
+// measured voltage. It is a CELLS frame with the source ID at 128 or above,
+// which the radio treats as a standalone voltage. voltageIndex 0, 1, 2... gives
+// separate sensors, so you can report several batteries independently.
+void sendVoltage(uint8_t voltageIndex, uint16_t millivolts)
+{
+  uint8_t payload[3];
+  payload[0] = 128 + voltageIndex;
+  payload[1] = (millivolts >> 8) & 0xFF; // MSB first (BigEndian)
+  payload[2] = millivolts & 0xFF;
+
+  crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_CELLS, payload, sizeof(payload));
 }
