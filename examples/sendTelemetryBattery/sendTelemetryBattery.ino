@@ -16,6 +16,12 @@ This code assumes you are using a voltage divider with a "high side" resistance 
 #define ADC_RES 8192.0
 #define ADC_VLT 3.3
 
+// How often to send telemetry, in milliseconds. Do not send telemetry every
+// loop: ELRS only carries it as fast as the Telem Ratio allows, so sending
+// faster does not make it arrive sooner, it just backs up the serial buffer
+// and slows this loop down. Keep this rate within what your ratio can carry.
+#define TELEM_INTERVAL_MS 100
+
 // Set up a new Serial object
 HardwareSerial crsfSerial(1);
 AlfredoCRSF crsf;
@@ -32,15 +38,19 @@ void setup()
 }
 
 float cap = 0;
+uint32_t lastTelemMs = 0;
 void loop()
 {
-  // Must call crsf.update() in loop() to process data
+  // Call crsf.update() every loop to process incoming data and keep link state current
   crsf.update();
-  
-  int snsVin = analogRead(PIN_SNS_VIN);
-  float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
-  sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
-  delay(10);
+
+  if (millis() - lastTelemMs >= TELEM_INTERVAL_MS)
+  {
+    lastTelemMs = millis();
+    int snsVin = analogRead(PIN_SNS_VIN);
+    float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
+    sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
+  }
 }
 
 static void sendRxBattery(float voltage, float current, float capacity, float remaining)

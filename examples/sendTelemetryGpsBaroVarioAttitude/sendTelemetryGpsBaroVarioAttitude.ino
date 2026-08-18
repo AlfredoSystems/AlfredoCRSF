@@ -4,9 +4,18 @@
 #define PIN_RX 7
 #define PIN_TX 8
 
+// How often to send telemetry, in milliseconds. Do not send telemetry every
+// loop: ELRS only carries it as fast as the Telem Ratio allows, so sending
+// faster does not make it arrive sooner, it just backs up the serial buffer
+// and slows this loop down. This example sends several frames per cycle, so
+// keep the rate modest and within what your ratio can carry.
+#define TELEM_INTERVAL_MS 100
+
 // Set up a new Serial object
 HardwareSerial crsfSerial(1);
 AlfredoCRSF crsf;
+
+uint32_t lastTelemMs = 0;
 
 void setup()
 {
@@ -21,14 +30,18 @@ void setup()
 
 void loop()
 {
-  // Must call crsf.update() in loop() to process data
+  // Call crsf.update() every loop to process incoming data and keep link state current
   crsf.update();
 
-  sendGps(42.12345, -82.12345, 200.5, 20.13, 690, 4);
-  sendGpsTime(2026, 7, 14, 12, 34, 56, 789);
-  sendBaroAltitude(234.1, 154.1);
-  sendAttitude(0.05,-2.43,1.23);
-  sendAirspeed(87.5);
+  if (millis() - lastTelemMs >= TELEM_INTERVAL_MS)
+  {
+    lastTelemMs = millis();
+    sendGps(42.12345, -82.12345, 200.5, 20.13, 690, 4);
+    sendGpsTime(2026, 7, 14, 12, 34, 56, 789);
+    sendBaroAltitude(234.1, 154.1);
+    sendAttitude(0.05,-2.43,1.23);
+    sendAirspeed(87.5);
+  }
 }
 
 void sendGps(float latitude, float longitude, float groundspeed, float heading, float altitude, float satellites)

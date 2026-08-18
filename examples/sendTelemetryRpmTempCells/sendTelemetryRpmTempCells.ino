@@ -23,9 +23,18 @@ which is what sendVoltage() below does.
 #define PIN_RX 4
 #define PIN_TX 5
 
+// How often to send telemetry, in milliseconds. Do not send telemetry every
+// loop: ELRS only carries it as fast as the Telem Ratio allows, so sending
+// faster does not make it arrive sooner, it just backs up the serial buffer
+// and slows this loop down. This example sends several frames per cycle, so
+// keep the rate modest and within what your ratio can carry.
+#define TELEM_INTERVAL_MS 100
+
 // Set up a new Serial object
 HardwareSerial crsfSerial(1);
 AlfredoCRSF crsf;
+
+uint32_t lastTelemMs = 0;
 
 void setup()
 {
@@ -40,28 +49,31 @@ void setup()
 
 void loop()
 {
-  // Must call crsf.update() in loop() to process data
+  // Call crsf.update() every loop to process incoming data and keep link state current
   crsf.update();
 
-  // Four motors, the last one spinning in reverse
-  int32_t motorRpm[4] = { 12500, 12480, 12510, -12495 };
-  sendRpm(0, motorRpm, 4);
+  if (millis() - lastTelemMs >= TELEM_INTERVAL_MS)
+  {
+    lastTelemMs = millis();
 
-  // Flight controller and ambient temperature, in tenths of a degree C
-  int16_t temperatures[2] = { 415, 226 }; // 41.5C and 22.6C
-  sendTemperature(0, temperatures, 2);
+    // Four motors, the last one spinning in reverse
+    int32_t motorRpm[4] = { 12500, 12480, 12510, -12495 };
+    sendRpm(0, motorRpm, 4);
 
-  // A 4S pack, in millivolts, shown as one battery of four cells
-  uint16_t cells[4] = { 4150, 4148, 4152, 4149 };
-  sendCells(0, cells, 4);
+    // Flight controller and ambient temperature, in tenths of a degree C
+    int16_t temperatures[2] = { 415, 226 }; // 41.5C and 22.6C
+    sendTemperature(0, temperatures, 2);
 
-  // A standalone voltage with millivolt precision, shown as its own "Volt"
-  // sensor. This is the ELRS 4.0 receiver VBatt style reading. Send more with
-  // different indexes, e.g. a receiver battery and an ignition battery.
-  sendVoltage(0, 16580); // 16.58V main battery
-  sendVoltage(1, 8240);  // 8.24V ignition battery
+    // A 4S pack, in millivolts, shown as one battery of four cells
+    uint16_t cells[4] = { 4150, 4148, 4152, 4149 };
+    sendCells(0, cells, 4);
 
-  delay(100);
+    // A standalone voltage with millivolt precision, shown as its own "Volt"
+    // sensor. This is the ELRS 4.0 receiver VBatt style reading. Send more with
+    // different indexes, e.g. a receiver battery and an ignition battery.
+    sendVoltage(0, 16580); // 16.58V main battery
+    sendVoltage(1, 8240);  // 8.24V ignition battery
+  }
 }
 
 // RPM values are signed 24 bit, so each one is packed as three bytes.
