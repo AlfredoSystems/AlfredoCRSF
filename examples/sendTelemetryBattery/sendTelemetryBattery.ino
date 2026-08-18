@@ -6,8 +6,8 @@ This code assumes you are using a voltage divider with a "high side" resistance 
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
 
-#define PIN_RX 7
-#define PIN_TX 8
+#define PIN_RX 4
+#define PIN_TX 5
 
 #define PIN_SNS_VIN 3
 

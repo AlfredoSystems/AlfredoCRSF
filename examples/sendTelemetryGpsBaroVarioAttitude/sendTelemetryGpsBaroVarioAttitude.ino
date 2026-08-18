@@ -1,8 +1,8 @@
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
 
-#define PIN_RX 7
-#define PIN_TX 8
+#define PIN_RX 4
+#define PIN_TX 5
 
 // How often to send telemetry, in milliseconds. Do not send telemetry every
 // loop: ELRS only carries it as fast as the Telem Ratio allows, so sending
