@@ -61,6 +61,35 @@ public:
     // is not copied and must remain valid. Pass NULL to disable (default).
     void setDeviceName(const char *name);
 
+    // --- ELRS parameter (config) access ---------------------------------
+    // These let you read and change a device's settings the way the ExpressLRS
+    // Lua menu does, for example to turn Model Match on from a DIY transmitter
+    // that has no Lua. The exchange is asynchronous: you send a request and the
+    // reply arrives later through update(), so drive these from your loop.
+
+    // Broadcast a discovery ping. Each device replies with its name and its
+    // parameter count, delivered to the device-info callback.
+    void pingDevices();
+
+    // Ask a device for one parameter's definition and value. fieldId is
+    // 1-based. The full parameter is reassembled from its chunks and delivered
+    // to the parameter callback. Walk fieldId 1..count to enumerate them.
+    void readParameter(uint8_t deviceAddr, uint8_t fieldId, uint8_t chunk = 0);
+
+    // Set a parameter's value. Suits the one-byte settings (selections like
+    // Model Match, and commands like Bind); wider integer parameters are not
+    // covered by this single-byte form.
+    void writeParameter(uint8_t deviceAddr, uint8_t fieldId, uint8_t value);
+
+    // Called once per device that answers a ping, with its name and how many
+    // parameters it has. The pointer is valid only for the duration of the call.
+    typedef void (*DeviceInfoCallback)(uint8_t deviceAddr, const char *name, uint8_t paramCount);
+    void onDeviceInfo(DeviceInfoCallback cb) { _deviceInfoCallback = cb; }
+
+    // Called once per parameter as each readParameter reply completes.
+    typedef void (*ParameterCallback)(uint8_t deviceAddr, const crsf_param_t *param);
+    void onParameter(ParameterCallback cb) { _parameterCallback = cb; }
+
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
     const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
@@ -115,6 +144,14 @@ private:
     uint8_t _channelsStatus;
     int _channels[CRSF_NUM_CHANNELS];
 
+    // Parameter access: callbacks and the buffer used to reassemble a
+    // PARAMETER_SETTINGS_ENTRY that arrives split across several chunks.
+    DeviceInfoCallback _deviceInfoCallback;
+    ParameterCallback _parameterCallback;
+    uint8_t _paramBuf[CRSF_MAX_PACKET_LEN];
+    uint8_t _paramBufLen;
+    uint8_t _paramFieldId; // field currently being reassembled, 0 = none
+
     void handleSerialIn();
     void handleByteReceived();
     void shiftRxBuffer(uint8_t cnt);
@@ -138,6 +175,8 @@ private:
     void packetCells(const crsf_header_t *p);
     void packetElrsStatus(const crsf_header_t *p);
     void packetHandsetTiming(const crsf_header_t *p);
+    void packetDeviceInfo(const crsf_header_t *p);
+    void packetParameterEntry(const crsf_header_t *p);
 
     void sendDeviceInfo(uint8_t destAddr);
 };

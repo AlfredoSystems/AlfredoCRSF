@@ -4,7 +4,9 @@ AlfredoCRSF::AlfredoCRSF() :
     _deviceAddr(CRSF_ADDRESS_FLIGHT_CONTROLLER), _deviceName(NULL),
     _crc(0xd5),
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
-    _hasChannelsStatus(false), _channelsStatus(0)
+    _hasChannelsStatus(false), _channelsStatus(0),
+    _deviceInfoCallback(NULL), _parameterCallback(NULL),
+    _paramBufLen(0), _paramFieldId(0)
 {
 
 }
@@ -173,6 +175,12 @@ void AlfredoCRSF::processExtendedPacketIn(const crsf_header_t *hdr)
             sendDeviceInfo(ext->orig_addr);
         break;
     }
+    case CRSF_FRAMETYPE_DEVICE_INFO:
+        packetDeviceInfo(hdr);
+        break;
+    case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
+        packetParameterEntry(hdr);
+        break;
     }
 }
 
@@ -455,7 +463,8 @@ void AlfredoCRSF::writeExtPacket(uint8_t type, uint8_t destAddr, const void *pay
     uint8_t buf[CRSF_MAX_PACKET_LEN];
     buf[0] = destAddr;
     buf[1] = _deviceAddr;
-    memcpy(&buf[2], payload, len);
+    if (len)
+        memcpy(&buf[2], payload, len);
     writePacket(CRSF_SYNC_BYTE, type, buf, len + 2);
 }
 
@@ -514,4 +523,105 @@ void AlfredoCRSF::sendDeviceInfo(uint8_t destAddr)
     payload[nameLen++] = '\0';
     memset(&payload[nameLen], 0, 14);
     writeExtPacket(CRSF_FRAMETYPE_DEVICE_INFO, destAddr, payload, nameLen + 14);
+}
+
+void AlfredoCRSF::pingDevices()
+{
+    writeExtPacket(CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_BROADCAST, NULL, 0);
+}
+
+void AlfredoCRSF::readParameter(uint8_t deviceAddr, uint8_t fieldId, uint8_t chunk)
+{
+    // Payload is the field index followed by which chunk to send
+    uint8_t payload[2] = { fieldId, chunk };
+    writeExtPacket(CRSF_FRAMETYPE_PARAMETER_READ, deviceAddr, payload, sizeof(payload));
+}
+
+void AlfredoCRSF::writeParameter(uint8_t deviceAddr, uint8_t fieldId, uint8_t value)
+{
+    // Payload is the field index followed by the new value
+    uint8_t payload[2] = { fieldId, value };
+    writeExtPacket(CRSF_FRAMETYPE_PARAMETER_WRITE, deviceAddr, payload, sizeof(payload));
+}
+
+// DEVICE_INFO payload: name (null-terminated), serial (4), hardware version (4),
+// software version (4), field count (1), parameter version (1)
+void AlfredoCRSF::packetDeviceInfo(const crsf_header_t *p)
+{
+    if (!_deviceInfoCallback)
+        return;
+    const crsf_ext_header_t *ext = (const crsf_ext_header_t *)p;
+    if (ext->dest_addr != _deviceAddr && ext->dest_addr != CRSF_ADDRESS_BROADCAST)
+        return;
+
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+    uint8_t nameLen = 0;
+    while (nameLen < payloadLen && ext->payload[nameLen] != '\0')
+        nameLen++;
+    if (nameLen >= payloadLen)
+        return; // no name terminator, malformed
+
+    uint8_t afterName = nameLen + 1;
+    // serial(4) + hwVer(4) + swVer(4) + fieldCount(1) + paramVersion(1) = 14
+    if (afterName + 14 > payloadLen)
+        return;
+    uint8_t fieldCount = ext->payload[afterName + 12];
+
+    _deviceInfoCallback(ext->orig_addr, (const char *)ext->payload, fieldCount);
+}
+
+// PARAMETER_SETTINGS_ENTRY payload: field id, chunks remaining, then the field
+// body split across chunks. The first chunk's body is parent, type, name
+// (null-terminated), and type-specific data; later chunks continue the data.
+// This reassembles the body and hands back the parts we decode.
+void AlfredoCRSF::packetParameterEntry(const crsf_header_t *p)
+{
+    if (!_parameterCallback)
+        return;
+    const crsf_ext_header_t *ext = (const crsf_ext_header_t *)p;
+    if (ext->dest_addr != _deviceAddr && ext->dest_addr != CRSF_ADDRESS_BROADCAST)
+        return;
+
+    uint8_t payloadLen = p->frame_size - CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+    if (payloadLen < 2)
+        return;
+    uint8_t fieldId = ext->payload[0];
+    uint8_t chunksRemain = ext->payload[1];
+    const uint8_t *body = &ext->payload[2];
+    uint8_t bodyLen = payloadLen - 2;
+
+    // A new field id means a fresh entry, so start the buffer over
+    if (_paramFieldId != fieldId)
+    {
+        _paramFieldId = fieldId;
+        _paramBufLen = 0;
+    }
+    for (uint8_t i = 0; i < bodyLen && _paramBufLen < sizeof(_paramBuf); i++)
+        _paramBuf[_paramBufLen++] = body[i];
+
+    if (chunksRemain != 0)
+        return; // wait for the rest
+
+    // Body complete: parent, type, name...
+    if (_paramBufLen >= 3)
+    {
+        crsf_param_t param;
+        param.fieldId = fieldId;
+        param.parent = _paramBuf[0];
+        uint8_t typeByte = _paramBuf[1];
+        param.type = typeByte & CRSF_PARAM_TYPE_MASK;
+        param.hidden = (typeByte & 0x80) != 0;
+
+        uint8_t i = 0;
+        while (i < CRSF_PARAM_NAME_MAX && (uint8_t)(2 + i) < _paramBufLen && _paramBuf[2 + i] != '\0')
+        {
+            param.name[i] = (char)_paramBuf[2 + i];
+            i++;
+        }
+        param.name[i] = '\0';
+
+        _parameterCallback(ext->orig_addr, &param);
+    }
+    _paramFieldId = 0;
+    _paramBufLen = 0;
 }

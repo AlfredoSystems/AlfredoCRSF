@@ -90,6 +90,7 @@ void loop()
 | `elrs4ReceiverTest` | ❌ | ✅ | Bench test a receiver. On 3.x the newer telemetry sections stay silent, which is the compatibility check |
 | `handsetEmulator` | ✅ | ✅ | Drive a TX module the way a handset does. Set `ARM_WITH_STATUS_BYTE` to 0 for 3.x |
 | `elrsPassthrough` | ✅ | ✅ | Update the receiver's firmware through this board, using the ExpressLRS Configurator's Betaflight Passthrough method |
+| `enableModelMatch` | ❌ | ✅ | Turn on Model Match on a TX module from the Arduino, by reading and writing its ELRS parameters (no Lua radio needed) |
 
 ## Troubleshooting
 
