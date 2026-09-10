@@ -150,7 +150,9 @@ private:
     ParameterCallback _parameterCallback;
     uint8_t _paramBuf[CRSF_MAX_PACKET_LEN];
     uint8_t _paramBufLen;
-    uint8_t _paramFieldId; // field currently being reassembled, 0 = none
+    uint8_t _paramFieldId;      // field currently being reassembled, 0 = none
+    uint8_t _paramDeviceAddr;   // device we are reading a parameter from
+    uint8_t _paramChunksRcvd;   // chunks received so far, = next chunk to request
 
     void handleSerialIn();
     void handleByteReceived();

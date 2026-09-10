@@ -6,7 +6,7 @@ AlfredoCRSF::AlfredoCRSF() :
     _lastReceive(0), _lastChannelsPacket(0), _linkIsUp(false),
     _hasChannelsStatus(false), _channelsStatus(0),
     _deviceInfoCallback(NULL), _parameterCallback(NULL),
-    _paramBufLen(0), _paramFieldId(0)
+    _paramBufLen(0), _paramFieldId(0), _paramDeviceAddr(0), _paramChunksRcvd(0)
 {
 
 }
@@ -532,6 +532,16 @@ void AlfredoCRSF::pingDevices()
 
 void AlfredoCRSF::readParameter(uint8_t deviceAddr, uint8_t fieldId, uint8_t chunk)
 {
+    _paramDeviceAddr = deviceAddr;
+    // Starting a fresh read (chunk 0) discards any half-reassembled field, so a
+    // retry does not append to stale data. Later chunks are requested by the
+    // reassembler and must not reset it.
+    if (chunk == 0)
+    {
+        _paramFieldId = 0;
+        _paramBufLen = 0;
+        _paramChunksRcvd = 0;
+    }
     // Payload is the field index followed by which chunk to send
     uint8_t payload[2] = { fieldId, chunk };
     writeExtPacket(CRSF_FRAMETYPE_PARAMETER_READ, deviceAddr, payload, sizeof(payload));
@@ -595,12 +605,20 @@ void AlfredoCRSF::packetParameterEntry(const crsf_header_t *p)
     {
         _paramFieldId = fieldId;
         _paramBufLen = 0;
+        _paramChunksRcvd = 0;
     }
     for (uint8_t i = 0; i < bodyLen && _paramBufLen < sizeof(_paramBuf); i++)
         _paramBuf[_paramBufLen++] = body[i];
+    _paramChunksRcvd++;
 
     if (chunksRemain != 0)
-        return; // wait for the rest
+    {
+        // The field is split across chunks and the device only sends the chunk
+        // we ask for, so request the next one. _paramChunksRcvd is the count so
+        // far, which is also the index of the next chunk to fetch.
+        readParameter(_paramDeviceAddr, fieldId, _paramChunksRcvd);
+        return;
+    }
 
     // Body complete: parent, type, name...
     if (_paramBufLen >= 3)
@@ -624,4 +642,5 @@ void AlfredoCRSF::packetParameterEntry(const crsf_header_t *p)
     }
     _paramFieldId = 0;
     _paramBufLen = 0;
+    _paramChunksRcvd = 0;
 }
