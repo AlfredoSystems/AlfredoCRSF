@@ -39,6 +39,36 @@
 #define CRSF_COMMAND_MODEL_SELECT_ID 0x05 // select model/receiver ID
 #define CRSF_COMMAND_CRC_POLY        0xBA
 
+// Parameter (config field) value types, as reported in a PARAMETER_SETTINGS_ENTRY.
+// The high bit (0x80) of the type byte is a "hidden" flag, masked off here.
+typedef enum
+{
+    CRSF_PARAM_UINT8 = 0,
+    CRSF_PARAM_INT8 = 1,
+    CRSF_PARAM_UINT16 = 2,
+    CRSF_PARAM_INT16 = 3,
+    CRSF_PARAM_FLOAT = 8,
+    CRSF_PARAM_TEXT_SELECTION = 9, // an on/off or multi-choice setting, e.g. Model Match
+    CRSF_PARAM_STRING = 10,
+    CRSF_PARAM_FOLDER = 11,        // groups other parameters, has no value
+    CRSF_PARAM_INFO = 12,          // read-only text
+    CRSF_PARAM_COMMAND = 13,       // an action to run, e.g. Bind
+} crsf_param_type_e;
+
+#define CRSF_PARAM_TYPE_MASK   0x7F // strip the hidden flag from a type byte
+#define CRSF_PARAM_NAME_MAX    24   // longest parameter name this library keeps
+
+// A decoded config parameter, delivered to the parameter callback as the
+// library reassembles PARAMETER_SETTINGS_ENTRY frames from a device.
+typedef struct crsf_param_s
+{
+    uint8_t fieldId; // 1-based index, used to read or write this parameter
+    uint8_t parent;  // fieldId of the folder this parameter lives in, 0 = root
+    uint8_t type;    // crsf_param_type_e
+    bool hidden;     // set if the device marked this parameter hidden
+    char name[CRSF_PARAM_NAME_MAX + 1]; // null-terminated, may be truncated
+} crsf_param_t;
+
 // Flag bits in the ELRS_STATUS flags field
 #define CRSF_ELRS_FLAG_CONNECTED         0x01 // status: TX connected to an RX
 #define CRSF_ELRS_FLAG_MODEL_MATCH_WARN  0x04 // warning: model mismatch
@@ -82,9 +112,9 @@ typedef enum
   // Extended Header Frames, range: 0x28 to 0x96
     CRSF_FRAMETYPE_DEVICE_PING = 0x28,                  //device discovery request (extended header frame)
     CRSF_FRAMETYPE_DEVICE_INFO = 0x29,                  //device discovery response (extended header frame)
-    // CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,  //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,            //no "flight controller" needs to know about this
-    // CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,           //no "flight controller" needs to know about this
+    CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,     //parameter definition/value, sent in reply to a read (extended header frame)
+    CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,               //request a parameter's definition/value (extended header frame)
+    CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,              //set a parameter's value (extended header frame)
     CRSF_FRAMETYPE_ELRS_STATUS = 0x2E,                  //ELRS good/bad packet count and status flags (extended header frame)
     CRSF_FRAMETYPE_COMMAND = 0x32,                      //commands e.g. model select, bind (extended header frame with an extra payload CRC)
     CRSF_FRAMETYPE_HANDSET = 0x3A,                      //handset subcommands e.g. timing sync (extended header frame; named RADIO_ID in older firmwares)
