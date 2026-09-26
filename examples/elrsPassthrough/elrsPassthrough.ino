@@ -29,8 +29,8 @@ receiver on a vehicle that can move. Recover by resetting the board.
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
 
-#define PIN_RX 4
-#define PIN_TX 5
+#define PIN_RX 7
+#define PIN_TX 8
 
 // Baud rate of the link to the receiver. Leave this at the receiver's CRSF
 // baud rate: an ESP32 receiver keeps using it while being flashed and has no
