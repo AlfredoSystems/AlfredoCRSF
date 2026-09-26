@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.3 - 2026-09-26
+
+### Added
+
+- **ELRS parameter read and write (`enableModelMatch` example).** Read and
+  change a device's settings over CRSF the way the ExpressLRS Lua menu does, for
+  example to turn Model Match on from a DIY transmitter that has no Lua radio.
+  Adds `pingDevices()`, `readParameter()`, `writeParameter()`, and the
+  `onDeviceInfo()` and `onParameter()` callbacks. Parameter entries that arrive
+  split across several chunks are reassembled automatically.
+- **`serialBridge` companion tool.** Turns a USB native ESP32 (S2 or S3) into a
+  USB to serial adapter for flashing a blank ESP8285 or ESP8266 through its ROM
+  bootloader, which Betaflight passthrough and the CRSF `bl` command cannot
+  reach because the chip has no firmware yet. `serialBridgeESP.md` writes up the
+  setup that actually works.
+
 ## 2.2 — 2026-08-18
 
 ### Fixed
