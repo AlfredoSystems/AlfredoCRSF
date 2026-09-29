@@ -1,8 +1,15 @@
 #include <AlfredoCRSF.h>
 #include <HardwareSerial.h>
 
-#define PIN_RX 4
-#define PIN_TX 5
+//Rotini V3:
+//#define PIN_RX 7
+//#define PIN_TX 8
+//Rotini V4:
+//#define PIN_RX 18 
+//#define PIN_TX 17
+
+#define PIN_RX 4       // this board's RX, wired to the target's TX
+#define PIN_TX 5       // this board's TX, wired to the target's RX
 
 // Set up a new Serial object
 HardwareSerial crsfSerial(1);
