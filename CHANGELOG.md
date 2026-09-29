@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.4 - 2026-09-28
+
+### Changed
+
+- **Firmware upload examples moved to `examples/firmwareUpload/`.**
+  `elrsPassthrough` and `serialBridge` now live there. The examples also have
+  Rotini V3 and V4 pin presets.
+- **`serialBridge` now needs Tools > USB Mode set to USB-OTG (TinyUSB).** In
+  Hardware CDC mode the ESP32-S3 reboots itself when esptool resets its target,
+  and that cannot be turned off. A compile error says so if the mode is wrong.
+
+### Fixed
+
+- **`elrsPassthrough` works on native USB boards such as the ESP32-S3.** Once an
+  ESP8285 receiver is in its bootloader the relay switches to 74880 (new
+  `BL_BAUD`), and the board goes straight back into the bridge after the
+  Configurator reopens the port, which resets it. Needs Tools > USB Mode set to
+  Hardware CDC and JTAG, checked at compile time.
+- **`serialBridge` works with the ExpressLRS Configurator's UART method**, on
+  the ESP32-S3 and now the S2. It follows the host's baud rate through esptool's
+  switch to 460800 and no longer loses the target's replies. Optional
+  `PIN_TARGET_EN` and `PIN_TARGET_BOOT` pins can put the target into download
+  mode automatically.
+- **`serialBridgeESP.md` rewritten** to match what actually works.
+
 ## 2.3 - 2026-09-26
 
 ### Added
