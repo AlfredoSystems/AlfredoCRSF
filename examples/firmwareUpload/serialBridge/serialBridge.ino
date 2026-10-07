@@ -83,6 +83,14 @@ void setup()
   // reboots this board instead. It is passed on to the target below.
   Serial.enableReboot(false);
 
+#if SOC_UART_SUPPORT_REF_TICK
+  // On the ESP32-S2 the core clocks a UART from the 1 MHz REF_TICK at 250000
+  // baud and below, which builds 115200 out of uneven 8 and 9 microsecond bits.
+  // The target's bootloader measures that as about 5% fast and keeps the error
+  // when esptool switches to 460800, where this board's rate is exact, so the
+  // two ends can no longer talk. The APB clock gives even bits at every rate.
+  target.setClockSource(UART_CLK_SRC_APB);
+#endif
   target.begin(DEFAULT_BAUD, SERIAL_8N1, PIN_RX, PIN_TX);
 
   // Open drain, so the pins only ever pull low and never fight the target's own
