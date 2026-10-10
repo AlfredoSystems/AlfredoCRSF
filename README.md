@@ -75,11 +75,33 @@ void loop()
 }
 ```
 
+### Sticks, switches and buttons
+
+`getAxis()` reads a stick channel as -1..1 with a dead zone. `CrsfSwitch` reads
+a channel the transmitter drives to 1000/1500/2000 us as `DOWN`, `MIDDLE` or
+`UP`, and tells you the loop it changes: a three-position switch, a
+two-position switch, or two momentary buttons that share a channel.
+
+```cpp
+CrsfSwitch armSwitch(5);   // channel 5
+
+void loop()
+{
+  crsf.update();
+  armSwitch.update(crsf);
+
+  float throttle = crsf.getAxis(3);                   // -1..1
+  bool armed = armSwitch.is(CrsfSwitch::UP);          // where it sits
+  if (armSwitch.movedTo(CrsfSwitch::UP)) beep();      // this loop only
+}
+```
+
 ## Examples
 
 | Example | ELRS 3.x | ELRS 4.x | What it does |
 | --- | :---: | :---: | --- |
 | `printAllChannels` | ✅ | ✅ | Print all 16 channels. Start here |
+| `switchesAndButtons` | ✅ | ✅ | Sticks as axes, switches and buttons as positions with `CrsfSwitch` |
 | `linkStatusLed` | ✅ | ✅ | Drive an LED from link state |
 | `sendTelemetryBattery` | ✅ | ✅ | Measure a voltage divider and report battery telemetry |
 | `sendTelemetryGpsBaroVarioAttitude` | ✅ | ✅ | Send GPS, altitude, vario, attitude and airspeed. The GPS time packet needs 4.1+ |

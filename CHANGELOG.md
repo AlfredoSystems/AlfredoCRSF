@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5 - 2026-10-09
+
+### Added
+
+- **`CrsfSwitch`**: a channel the transmitter drives to 1000/1500/2000 us, read
+  as `DOWN` / `MIDDLE` / `UP` with `is()`, `movedTo()` and `movedFrom()`.
+  Covers three- and two-position switches and pairs of momentary buttons on
+  one channel. Included by `AlfredoCRSF.h`.
+- **`getAxis(ch, deadzone)`**: a stick channel as -1..1 with a dead zone.
+- **`switchesAndButtons` example.**
+
 ## 2.4 - 2026-09-28
 
 ### Changed

@@ -92,6 +92,16 @@ public:
 
     // Return current channel value (1-based) in us
     int getChannel(unsigned int ch) const { return _channels[ch - 1]; }
+    // The same channel as a stick axis: -1 at 1000 us, 0 at 1500, 1 at 2000,
+    // clipped to that range, and 0 within the dead zone around the center.
+    // For switches and buttons see CrsfSwitch.
+    float getAxis(unsigned int ch, float deadzone = 0.03f) const
+    {
+        float axis = (getChannel(ch) - 1500) / 500.0f;
+        if (axis > 1) axis = 1;
+        if (axis < -1) axis = -1;
+        return (axis > -deadzone && axis < deadzone) ? 0 : axis;
+    }
     const crsf_channels_t *getChannelsPacked() const { return &_channelsPacked;}
     const crsfLinkStatistics_t *getLinkStatistics() const { return &_linkStatistics; }
     const crsf_sensor_gps_t *getGpsSensor() const { return &_gpsSensor; }
@@ -182,3 +192,5 @@ private:
 
     void sendDeviceInfo(uint8_t destAddr);
 };
+
+#include "CrsfSwitch.h"   // switches and buttons on a channel; needs the class above
